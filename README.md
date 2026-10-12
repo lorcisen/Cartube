@@ -3,7 +3,11 @@
 YouTube-spelare för Android utan reklam, med stöd för Android Auto.
 
 - Sök och spela YouTube-videor utan reklam (via [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor)).
-- Bakgrundsuppspelning, bild-i-bild, favoriter och historik.
+- Prenumerationsflöde med de senaste videorna från kanalerna du följer. Importera dina
+  YouTube-prenumerationer från Google Takeout, eller prenumerera direkt i appen.
+- Kanalsidor, beskrivning, visningar, uppladdningsdatum och fler videor under spelaren.
+- Helskärm, bakgrundsuppspelning, bild-i-bild, favoriter och historik.
+- Casta till Chromecast (spelar den bästa strömmen med ljud och bild ihop, ofta 360p).
 - Dela en YouTube-länk till CarTube (eller öppna den med CarTube) för att spela den direkt.
 - **Android Auto:** CarTube visas som en mediaapp. Bläddra bland favoriter och historik,
   sök (även med rösten: "Hey Google, spela … på CarTube") och lyssna. När telefonen är

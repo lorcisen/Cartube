@@ -27,6 +27,13 @@
             android:layout_gravity="center"
             android:visibility="gone" />
 
+        <androidx.mediarouter.app.MediaRouteButton
+            android:id="@+id/castButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|end"
+            android:theme="@style/ThemeOverlay.CarTube.CastButton" />
+
         <TextView
             android:id="@+id/carOverlay"
             android:layout_width="match_parent"
@@ -40,42 +47,13 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <LinearLayout
-        android:id="@+id/info"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/details"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:background="?android:attr/colorBackground"
-        android:orientation="horizontal"
-        android:padding="16dp">
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <TextView
-                android:id="@+id/uploader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
-        </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/favorite"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/favorite"
-            android:src="@drawable/ic_favorite_border"
-            app:tint="@color/brand" />
-    </LinearLayout>
+        android:clipToPadding="false"
+        android:paddingBottom="8dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 </LinearLayout>

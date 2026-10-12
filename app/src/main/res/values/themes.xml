@@ -2,10 +2,41 @@
 <resources>
     <style name="Theme.CarTube" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/brand</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">#FFDAD6</item>
+        <item name="colorOnPrimaryContainer">#410002</item>
         <item name="colorSecondary">@color/brand_dark</item>
     </style>
 
     <style name="Theme.CarTube.Player">
         <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <style name="ThemeOverlay.CarTube.CastButton" parent="ThemeOverlay.Material3.Dark" />
+
+    <style name="TextAppearance.CarTube.Logo" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="CarTube.DurationBadge">
+        <item name="android:background">@drawable/duration_background</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingTop">1dp</item>
+        <item name="android:paddingBottom">1dp</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="CarTube.ActionButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_marginEnd">8dp</item>
+    </style>
+
+    <style name="CarTube.SubscribeButton" parent="Widget.Material3.Button">
+        <item name="android:text">@string/subscribe</item>
+        <item name="backgroundTint">@color/subscribe_background</item>
+        <item name="android:textColor">@color/subscribe_text</item>
     </style>
 </resources>

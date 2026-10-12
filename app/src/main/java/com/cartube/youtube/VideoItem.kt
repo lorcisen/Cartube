@@ -14,9 +14,15 @@ data class VideoItem(
     val uploader: String,
     val thumbnail: String?,
     val durationSec: Long,
+    /** Upload time in epoch millis, or 0 when unknown. */
+    val uploadedAt: Long = 0,
+    /** View count, or -1 when unknown. */
+    val views: Long = -1,
+    val uploaderUrl: String? = null,
+    val uploaderAvatar: String? = null,
 ) {
     fun toMediaItem(): MediaItem {
-        val extras = Bundle().apply { putLong(EXTRA_DURATION, durationSec) }
+        val extras = Bundle().apply { putString(EXTRA_JSON, toJson().toString()) }
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(uploader)
@@ -39,35 +45,53 @@ data class VideoItem(
         .put("uploader", uploader)
         .put("thumbnail", thumbnail)
         .put("duration", durationSec)
+        .put("uploadedAt", uploadedAt)
+        .put("views", views)
+        .put("uploaderUrl", uploaderUrl)
+        .put("uploaderAvatar", uploaderAvatar)
 
     fun putInto(intent: Intent): Intent = intent.putExtra(EXTRA_JSON, toJson().toString())
 
     companion object {
         private const val EXTRA_JSON = "com.cartube.VIDEO"
-        private const val EXTRA_DURATION = "com.cartube.DURATION"
 
         fun fromJson(json: JSONObject) = VideoItem(
             url = json.getString("url"),
             title = json.optString("title"),
             uploader = json.optString("uploader"),
-            thumbnail = json.optString("thumbnail").takeIf { it.isNotBlank() && it != "null" },
+            thumbnail = json.optStringOrNull("thumbnail"),
             durationSec = json.optLong("duration"),
+            uploadedAt = json.optLong("uploadedAt"),
+            views = json.optLong("views", -1),
+            uploaderUrl = json.optStringOrNull("uploaderUrl"),
+            uploaderAvatar = json.optStringOrNull("uploaderAvatar"),
         )
 
         fun fromIntent(intent: Intent): VideoItem? =
             intent.getStringExtra(EXTRA_JSON)?.let { fromJson(JSONObject(it)) }
 
-        fun fromMediaItem(item: MediaItem) = VideoItem(
-            url = item.mediaId,
-            title = item.mediaMetadata.title?.toString().orEmpty(),
-            uploader = item.mediaMetadata.artist?.toString().orEmpty(),
-            thumbnail = item.mediaMetadata.artworkUri?.toString(),
-            durationSec = item.mediaMetadata.extras?.getLong(EXTRA_DURATION) ?: 0,
-        )
+        fun fromMediaItem(item: MediaItem): VideoItem {
+            item.mediaMetadata.extras?.getString(EXTRA_JSON)?.let {
+                return fromJson(JSONObject(it))
+            }
+            return VideoItem(
+                url = item.mediaId,
+                title = item.mediaMetadata.title?.toString().orEmpty(),
+                uploader = item.mediaMetadata.artist?.toString().orEmpty(),
+                thumbnail = item.mediaMetadata.artworkUri?.toString(),
+                durationSec = 0,
+            )
+        }
 
-        /** Picks a thumbnail that looks sharp in a list without being huge. */
-        fun bestThumbnail(images: List<Image>): String? =
-            images.filter { it.width in 1..720 }.maxByOrNull { it.width }?.url
+        /** A placeholder for a bare link; details are filled in once the video loads. */
+        fun fromLink(url: String) = VideoItem(url, "", "", null, 0)
+
+        /** Picks an image that looks sharp in a list without being huge. */
+        fun bestImage(images: List<Image>, maxWidth: Int = 720): String? =
+            images.filter { it.width in 1..maxWidth }.maxByOrNull { it.width }?.url
                 ?: images.lastOrNull()?.url
+
+        private fun JSONObject.optStringOrNull(key: String): String? =
+            if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
     }
 }

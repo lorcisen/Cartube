@@ -27,6 +27,9 @@
         <meta-data
             android:name="com.google.android.gms.car.notification.SmallIcon"
             android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.cartube.player.CastOptionsProvider" />
 
         <activity
             android:name=".ui.MainActivity"
@@ -62,6 +65,10 @@
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.CarTube.Player" />
+
+        <activity
+            android:name=".ui.ChannelActivity"
+            android:exported="false" />
 
         <service
             android:name=".player.PlaybackService"

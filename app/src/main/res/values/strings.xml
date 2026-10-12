@@ -1,17 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CarTube</string>
+    <string name="nav_home">Prenumerationer</string>
+    <string name="nav_search">Sök</string>
+    <string name="nav_library">Bibliotek</string>
+
     <string name="search_hint">Sök på YouTube eller klistra in en länk</string>
-    <string name="tab_search">Sök</string>
+    <string name="filter_videos">Videor</string>
+    <string name="filter_channels">Kanaler</string>
+    <string name="empty_search">Sök efter videor eller kanaler.</string>
+    <string name="no_results">Inga träffar.</string>
+    <string name="search_failed">Sökningen misslyckades: %1$s</string>
+
     <string name="tab_favorites">Favoriter</string>
     <string name="tab_history">Historik</string>
-    <string name="empty_search">Sök efter en video för att komma igång.</string>
-    <string name="empty_favorites">Inga favoriter än. Tryck på hjärtat i spelaren för att spara en video.</string>
+    <string name="tab_subscriptions">Kanaler</string>
+    <string name="empty_favorites">Inga favoriter än. Tryck på Favorit under en video för att spara den.</string>
     <string name="empty_history">Inget spelat än.</string>
-    <string name="search_failed">Sökningen misslyckades: %1$s</string>
+    <string name="empty_subscriptions">Du prenumererar inte på några kanaler än.</string>
+    <string name="clear_history">Rensa historik</string>
+
+    <string name="home_empty_title">Dina prenumerationer</string>
+    <string name="home_empty_body">Importera kanalerna du följer på YouTube, eller sök upp kanaler och tryck Prenumerera. De senaste videorna visas sedan här.</string>
+    <string name="find_channels">Hitta kanaler</string>
+    <string name="feed_failed">Kunde inte hämta flödet: %1$s</string>
+
+    <string name="import_title">Importera från YouTube</string>
+    <string name="import_instructions">CarTube loggar inte in på ditt Google-konto. Istället hämtar du listan över kanaler du prenumererar på från Google Takeout:\n\n1. Tryck Öppna Takeout och logga in.\n2. Under YouTube och YouTube Music: tryck \"Alla YouTube-data ingår\", avmarkera allt utom \"prenumerationer\".\n3. Skapa exporten och ladda ner zip-filen när Google mejlar dig (brukar ta några minuter).\n4. Kom tillbaka hit, tryck Välj fil och välj zip-filen (eller subscriptions.csv).</string>
+    <string name="import_open_takeout">Öppna Takeout</string>
+    <string name="import_pick_file">Välj fil</string>
+    <string name="import_done">%1$d nya kanaler importerade (%2$d i filen).</string>
+    <string name="import_failed">Importen misslyckades</string>
+
+    <string name="views">%1$s visningar</string>
+    <string name="subscribers">%1$s prenumeranter</string>
+    <string name="subscribe">Prenumerera</string>
+    <string name="subscribed">Prenumererar</string>
+    <string name="open_channel">Öppna kanal</string>
+    <string name="channel_failed">Kunde inte hämta kanalen: %1$s</string>
+
+    <string name="loading">Laddar…</string>
     <string name="playback_failed">Kunde inte spela upp: %1$s</string>
     <string name="favorite">Favorit</string>
     <string name="favorite_added">Sparad i favoriter</string>
     <string name="favorite_removed">Borttagen från favoriter</string>
+    <string name="share">Dela</string>
+    <string name="fullscreen">Helskärm</string>
+    <string name="cast">Casta</string>
+    <string name="up_next">Fler videor</string>
     <string name="car_audio_only">Ansluten till bilen – endast ljud.\nStyr uppspelningen från bilens skärm.</string>
 </resources>

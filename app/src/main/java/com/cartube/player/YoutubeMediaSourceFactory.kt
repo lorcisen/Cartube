@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.cartube.net.Http
+import com.cartube.youtube.StreamCache
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeProgressiveDashManifestCreator
@@ -29,13 +30,10 @@ import org.schabi.newpipe.extractor.stream.VideoStream
 
 /**
  * Turns a [MediaItem] whose mediaId is a YouTube URL into a playable source. The stream
- * info must already be in [streams]; the session callback resolves it before items are
+ * info must already be in [StreamCache]; the session callback resolves it before items are
  * handed to the player, because this factory is called on the main thread.
  */
-class YoutubeMediaSourceFactory(
-    context: Context,
-    private val streams: ResolvedStreams,
-) : MediaSource.Factory {
+class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
 
     private val fallback = DefaultMediaSourceFactory(context)
     private val dashData = YoutubeDataSource.Factory(rangeAsParameter = true)
@@ -58,7 +56,7 @@ class YoutubeMediaSourceFactory(
     override fun getSupportedTypes(): IntArray = fallback.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        val info = streams[mediaItem.mediaId]
+        val info = StreamCache.get(mediaItem.mediaId)
             ?: return fallback.createMediaSource(mediaItem)
         return try {
             build(info, mediaItem)

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CarTube" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF5A4F</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">#93000A</item>
+        <item name="colorOnPrimaryContainer">#FFDAD6</item>
+        <item name="colorSecondary">#FFB4AB</item>
+        <item name="android:colorBackground">#0F0F0F</item>
+        <item name="colorSurface">#0F0F0F</item>
+        <item name="colorSurfaceContainer">#1A1A1A</item>
+        <item name="colorSurfaceContainerHigh">#272727</item>
+    </style>
+</resources>

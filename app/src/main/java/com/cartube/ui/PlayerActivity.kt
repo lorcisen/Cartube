@@ -3,31 +3,50 @@ package com.cartube.ui
 import android.app.PictureInPictureParams
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Rational
+import android.view.LayoutInflater
+import android.view.OrientationEventListener
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.car.app.connection.CarConnection
 import androidx.core.content.ContextCompat
+import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
-import androidx.media3.common.MediaMetadata
+import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import coil.transform.CircleCropTransformation
 import com.cartube.R
 import com.cartube.data.Library
 import com.cartube.databinding.ActivityPlayerBinding
+import com.cartube.databinding.PlayerHeaderBinding
 import com.cartube.player.PlaybackService
+import com.cartube.youtube.Channel
 import com.cartube.youtube.VideoItem
+import com.cartube.youtube.YouTube
+import com.cartube.youtube.YouTube.toVideoItem
+import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import org.schabi.newpipe.extractor.stream.Description
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -37,8 +56,23 @@ class PlayerActivity : AppCompatActivity() {
     private var pendingItem: VideoItem? = null
     private var inCar = false
 
+    /** What the details below the player currently show. */
+    private var shown: VideoItem? = null
+    private var subscribers = -1L
+    private var description: CharSequence? = null
+    private var descriptionExpanded = false
+    private var detailsJob: Job? = null
+
+    private val header = HeaderAdapter()
+    private val related = VideoAdapter(
+        compact = true,
+        onClick = { playNew(it) },
+    )
+
     private val listener = object : Player.Listener {
-        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) = updateInfo()
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            mediaItem?.let { showFromPlayer(it) }
+        }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) = updatePipParams()
 
@@ -56,26 +90,45 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    /** Leaves fullscreen on back instead of closing the player. */
+    private val exitFullscreenOnBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = setFullscreen(false)
+    }
+
+    /**
+     * After the fullscreen button locks the orientation, unlock it again once the phone is
+     * physically turned the same way, so rotating keeps working as usual afterwards.
+     */
+    private val orientationListener by lazy {
+        object : OrientationEventListener(this) {
+            override fun onOrientationChanged(degrees: Int) {
+                if (degrees == ORIENTATION_UNKNOWN || !autoRotateEnabled()) return
+                val portrait = degrees < 30 || degrees > 330
+                val landscape = degrees in 60..120 || degrees in 240..300
+                val locked = requestedOrientation
+                if ((locked == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT && portrait) ||
+                    (locked == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE && landscape)
+                ) {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.padForSystemBars()
+        onBackPressedDispatcher.addCallback(this, exitFullscreenOnBack)
+
+        binding.details.adapter = ConcatAdapter(header, related)
+        binding.playerView.setFullscreenButtonClickListener { setFullscreen(it) }
+        runCatching { CastButtonFactory.setUpMediaRouteButton(applicationContext, binding.castButton) }
 
         if (savedInstanceState == null) pendingItem = VideoItem.fromIntent(intent)
-        pendingItem?.let { showItem(it) }
-
-        binding.favorite.setOnClickListener {
-            val item = currentItem() ?: return@setOnClickListener
-            val added = Library.toggleFavorite(item)
-            updateFavorite(item.url)
-            Toast.makeText(
-                this,
-                if (added) R.string.favorite_added else R.string.favorite_removed,
-                Toast.LENGTH_SHORT,
-            ).show()
-        }
+        pendingItem?.let { show(it) }
 
         CarConnection(this).type.observe(this) { type ->
             inCar = type == CarConnection.CONNECTION_TYPE_PROJECTION
@@ -88,10 +141,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val item = VideoItem.fromIntent(intent) ?: return
-        showItem(item)
-        val ready = controller
-        if (ready != null) play(ready, item) else pendingItem = item
+        VideoItem.fromIntent(intent)?.let { playNew(it) }
     }
 
     override fun onStart() {
@@ -104,10 +154,21 @@ class PlayerActivity : AppCompatActivity() {
             controller = ready
             binding.playerView.player = ready
             ready.addListener(listener)
-            pendingItem?.let { play(ready, it) }
+            val pending = pendingItem
             pendingItem = null
-            updateInfo()
+            if (pending != null) play(ready, pending) else ready.currentMediaItem?.let { showFromPlayer(it) }
+            updatePipParams()
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        orientationListener.enable()
+    }
+
+    override fun onPause() {
+        orientationListener.disable()
+        super.onPause()
     }
 
     override fun onStop() {
@@ -127,7 +188,8 @@ class PlayerActivity : AppCompatActivity() {
     override fun onPictureInPictureModeChanged(isInPip: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPip, newConfig)
         binding.playerView.useController = !isInPip
-        binding.info.isVisible = !isInPip && newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
+        binding.castButton.isVisible = !isInPip
+        binding.details.isVisible = !isInPip && newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
     }
 
     override fun onUserLeaveHint() {
@@ -138,6 +200,13 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    private fun playNew(item: VideoItem) {
+        show(item)
+        val ready = controller
+        if (ready != null) play(ready, item) else pendingItem = item
+        binding.details.scrollToPosition(0)
+    }
+
     private fun play(controller: MediaController, item: VideoItem) {
         binding.loading.isVisible = true
         controller.setMediaItem(item.toMediaItem())
@@ -145,29 +214,60 @@ class PlayerActivity : AppCompatActivity() {
         controller.play()
     }
 
-    private fun currentItem(): VideoItem? =
-        controller?.currentMediaItem?.let { VideoItem.fromMediaItem(it) } ?: pendingItem
-
-    private fun showItem(item: VideoItem) {
-        binding.title.text = item.title
-        binding.uploader.text = item.uploader
-        updateFavorite(item.url)
+    private fun showFromPlayer(mediaItem: MediaItem) {
+        if (mediaItem.mediaId != shown?.url) show(VideoItem.fromMediaItem(mediaItem))
     }
 
-    private fun updateInfo() {
-        currentItem()?.let { showItem(it) }
-        updatePipParams()
+    /** Shows what we know right away, then loads description, channel and related videos. */
+    private fun show(item: VideoItem) {
+        val sameVideo = shown?.url == item.url
+        shown = item
+        if (!sameVideo) {
+            subscribers = -1
+            description = null
+            descriptionExpanded = false
+            related.submitList(emptyList())
+        }
+        header.notifyItemChanged(0)
+        if (sameVideo) return
+
+        detailsJob?.cancel()
+        detailsJob = lifecycleScope.launch {
+            val info = runCatching { YouTube.streamInfo(item.url) }.getOrNull() ?: return@launch
+            if (shown?.url != item.url && shown?.url != info.url) return@launch
+            shown = info.toVideoItem()
+            subscribers = info.uploaderSubscriberCount
+            description = info.description?.let { renderDescription(it) }
+            header.notifyItemChanged(0)
+            related.submitList(YouTube.related(info))
+        }
     }
 
-    private fun updateFavorite(url: String) {
-        binding.favorite.setImageResource(
-            if (Library.isFavorite(url)) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
-        )
+    private fun renderDescription(description: Description): CharSequence? {
+        val content = description.content?.takeIf { it.isNotBlank() } ?: return null
+        return if (description.type == Description.HTML) {
+            HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        } else {
+            content
+        }
     }
+
+    private fun setFullscreen(fullscreen: Boolean) {
+        requestedOrientation = if (fullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    private fun autoRotateEnabled() =
+        Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
 
     private fun applyOrientation(config: Configuration) {
         val landscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE
-        binding.info.isVisible = !landscape
+        binding.details.isVisible = !landscape && !isInPictureInPictureMode
+        binding.playerView.setFullscreenButtonState(landscape)
+        exitFullscreenOnBack.isEnabled = landscape
         binding.playerContainer.layoutParams = binding.playerContainer.layoutParams.apply {
             height = if (landscape) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
         }
@@ -191,5 +291,61 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun updatePipParams() {
         setPictureInPictureParams(pipParams())
+    }
+
+    /** Title, stats, actions, channel and description above the related videos. */
+    private inner class HeaderAdapter : RecyclerView.Adapter<HeaderAdapter.Holder>() {
+        inner class Holder(val b: PlayerHeaderBinding) : RecyclerView.ViewHolder(b.root)
+
+        override fun getItemCount() = 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            Holder(PlayerHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val b = holder.b
+            val item = shown ?: return
+            b.title.text = item.title.ifBlank { getString(R.string.loading) }
+            b.meta.text = videoMeta(item, includeUploader = false)
+            b.meta.isVisible = b.meta.text.isNotEmpty()
+
+            val favorite = Library.isFavorite(item.url)
+            b.favorite.setIconResource(if (favorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border)
+            b.favorite.setOnClickListener {
+                val added = Library.toggleFavorite(shown ?: return@setOnClickListener)
+                notifyItemChanged(0)
+                Toast.makeText(
+                    this@PlayerActivity,
+                    if (added) R.string.favorite_added else R.string.favorite_removed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            b.share.setOnClickListener { shareVideo(item) }
+            b.fullscreen.setOnClickListener { setFullscreen(true) }
+
+            val channelUrl = item.uploaderUrl
+            b.channelRow.isVisible = item.uploader.isNotBlank()
+            b.channelName.text = item.uploader
+            b.channelSubscribers.isVisible = subscribers >= 0
+            b.channelSubscribers.text = getString(R.string.subscribers, formatCount(subscribers))
+            b.channelAvatar.load(item.uploaderAvatar) {
+                transformations(CircleCropTransformation())
+                placeholder(R.drawable.avatar_placeholder)
+                error(R.drawable.avatar_placeholder)
+            }
+            b.subscribe.isVisible = channelUrl != null
+            if (channelUrl != null) {
+                bindSubscribeButton(b.subscribe, Channel(channelUrl, item.uploader, item.uploaderAvatar))
+                b.channelRow.setOnClickListener { openChannelOf(item) }
+            }
+
+            b.description.isVisible = description != null
+            b.description.text = description
+            b.description.maxLines = if (descriptionExpanded) Int.MAX_VALUE else 3
+            b.description.setOnClickListener {
+                descriptionExpanded = !descriptionExpanded
+                notifyItemChanged(0)
+            }
+        }
     }
 }

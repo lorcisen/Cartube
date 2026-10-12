@@ -3,4 +3,5 @@
     <color name="brand">#E53935</color>
     <color name="brand_dark">#B71C1C</color>
     <color name="icon_background">#1E1E1E</color>
+    <color name="placeholder">#33888888</color>
 </resources>
