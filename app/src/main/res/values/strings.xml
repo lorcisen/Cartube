@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CarTube</string>
+    <string name="search_hint">Sök på YouTube eller klistra in en länk</string>
+    <string name="tab_search">Sök</string>
+    <string name="tab_favorites">Favoriter</string>
+    <string name="tab_history">Historik</string>
+    <string name="empty_search">Sök efter en video för att komma igång.</string>
+    <string name="empty_favorites">Inga favoriter än. Tryck på hjärtat i spelaren för att spara en video.</string>
+    <string name="empty_history">Inget spelat än.</string>
+    <string name="search_failed">Sökningen misslyckades: %1$s</string>
+    <string name="playback_failed">Kunde inte spela upp: %1$s</string>
+    <string name="favorite">Favorit</string>
+    <string name="favorite_added">Sparad i favoriter</string>
+    <string name="favorite_removed">Borttagen från favoriter</string>
+    <string name="car_audio_only">Ansluten till bilen – endast ljud.\nStyr uppspelningen från bilens skärm.</string>
+</resources>

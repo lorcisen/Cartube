@@ -1,0 +1,37 @@
+# CarTube
+
+YouTube-spelare för Android utan reklam, med stöd för Android Auto.
+
+- Sök och spela YouTube-videor utan reklam (via [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor)).
+- Bakgrundsuppspelning, bild-i-bild, favoriter och historik.
+- Dela en YouTube-länk till CarTube (eller öppna den med CarTube) för att spela den direkt.
+- **Android Auto:** CarTube visas som en mediaapp. Bläddra bland favoriter och historik,
+  sök (även med rösten: "Hey Google, spela … på CarTube") och lyssna. När telefonen är
+  ansluten till bilen spelas **bara ljudet**. Ingen video visas, varken på bilskärmen
+  eller på telefonen.
+
+## Installera
+
+1. Öppna [senaste releasen](../../releases/tag/latest) på telefonen och ladda ner `CarTube.apk`.
+2. Öppna filen och tillåt installation från okända källor när du blir tillfrågad.
+
+### Få appen att synas i Android Auto
+
+Android Auto visar bara appar från Play Butik om du inte slår på utvecklarläget:
+
+1. Telefonen: **Inställningar → Anslutna enheter → Anslutningsinställningar → Android Auto**.
+2. Scrolla längst ner och tryck på **Version** ungefär 10 gånger, bekräfta utvecklarläget.
+3. Meny (⋮) → **Utvecklarinställningar** → slå på **Okända källor**.
+4. I Android Auto-inställningarna: **Anpassa startprogram** och se till att CarTube är ikryssad.
+
+## Bygga
+
+Varje push byggs av GitHub Actions (`.github/workflows/build.yml`). Pushar till
+standardgrenen publicerar APK:n som releasen `latest`. Lokalt: `./gradlew assembleDebug`.
+
+APK:n signeras med en debug-nyckel som finns i repot (`app/debug.keystore`), så att nya
+versioner kan installeras ovanpå gamla.
+
+## Licens
+
+NewPipeExtractor är licensierad under GPL-3.0, och därför gäller GPL-3.0 även för den här appen.

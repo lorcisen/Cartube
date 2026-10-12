@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CarTube" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorSecondary">@color/brand_dark</item>
+    </style>
+
+    <style name="Theme.CarTube.Player">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>
