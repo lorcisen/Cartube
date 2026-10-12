@@ -19,7 +19,7 @@
         <item name="android:letterSpacing">-0.02</item>
     </style>
 
-    <style name="CarTube.DurationBadge">
+    <style name="CarTube.DurationBadge" parent="">
         <item name="android:background">@drawable/duration_background</item>
         <item name="android:paddingStart">4dp</item>
         <item name="android:paddingEnd">4dp</item>

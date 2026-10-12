@@ -5,7 +5,7 @@
             <solid android:color="@color/placeholder" />
         </shape>
     </item>
-    <item android:bottom="25%" android:left="25%" android:right="25%" android:top="20%">
+    <item android:width="24dp" android:height="24dp" android:gravity="center">
         <vector android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
             <path android:fillColor="#99FFFFFF"
                 android:pathData="M12,4a4,4 0,1 1,0 8a4,4 0,1 1,0 -8zM4,22c0,-4.4 3.6,-8 8,-8s8,3.6 8,8z" />
