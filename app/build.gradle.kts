@@ -11,8 +11,8 @@ android {
         applicationId = "com.cartube"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "4.0.5"
+        versionCode = 23
+        versionName = "4.1"
         buildConfigField("String", "UPDATE_REPO", "\"lorcisen/Cartube\"")
     }
 
@@ -104,6 +104,7 @@ dependencies {
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
+    implementation("androidx.leanback:leanback:1.0.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
     implementation("com.google.android.material:material:1.12.0")

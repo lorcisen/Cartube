@@ -4,4 +4,6 @@
     <color name="brand_dark">#B71C1C</color>
     <color name="icon_background">#1E1E1E</color>
     <color name="placeholder">#33888888</color>
+    <color name="tv_brand">#1A1A1A</color>
+    <color name="tv_card">#262626</color>
 </resources>

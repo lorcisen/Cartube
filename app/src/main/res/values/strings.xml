@@ -293,4 +293,7 @@
     <string name="error_offline">Ingen internetanslutning.</string>
     <string name="gesture_zoom">Fyll skärmen</string>
     <string name="gesture_fit">Hela bilden</string>
+    <string name="tv_trending_sweden">Trendande i Sverige</string>
+    <string name="tv_more">Mer</string>
+    <string name="tv_results">Resultat för \"%1$s\"</string>
 </resources>
