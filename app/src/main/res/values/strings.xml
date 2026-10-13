@@ -289,4 +289,6 @@
     <string name="shorts_none">Hittade inga Shorts.</string>
     <string name="shorts_car">Ansluten till bilen – Shorts visas inte under körning.</string>
     <string name="short_failed">Kunde inte spela den här Shorten</string>
+    <string name="error_rate_limited">YouTube har tillfälligt begränsat antalet förfrågningar från din uppkoppling. Vänta en stund och försök igen – oftast några minuter.</string>
+    <string name="error_offline">Ingen internetanslutning.</string>
 </resources>

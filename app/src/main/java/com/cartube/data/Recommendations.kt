@@ -37,7 +37,7 @@ object Recommendations {
 
     private const val MAX_SEEDS = 12
     private const val MAX_AGE_MS = 30 * 60 * 1000L
-    private const val CATEGORIZE_TOP = 60
+    private const val CATEGORIZE_TOP = 24
     private const val MIN_PER_CATEGORY = 3
 
     private val mutex = Mutex()
@@ -67,13 +67,14 @@ object Recommendations {
     /** Looks up the category of the top videos that don't have one yet, then regroups. */
     suspend fun refine(): Result {
         val base = cached ?: return load()
-        if (!base.categoriesPending) return base
+        if (!base.categoriesPending || com.cartube.net.RateLimit.active) return base
         val missing = base.all.take(CATEGORIZE_TOP).filter { CategoryCache[it.url] == null }
-        val limit = Semaphore(6)
+        val limit = Semaphore(2)
         coroutineScope {
             missing.map { video ->
                 async(Dispatchers.IO) {
                     limit.withPermit {
+                        if (com.cartube.net.RateLimit.active) return@withPermit
                         runCatching { YouTube.streamInfo(video.url) }.getOrNull()?.let {
                             CategoryCache[video.url] = it.category.orEmpty()
                         }
@@ -107,7 +108,7 @@ object Recommendations {
         val subscribed = Library.subscriptions().map { it.url }.toSet()
         val knownChannels = history.mapNotNull { it.uploaderUrl }.toSet()
 
-        val limit = Semaphore(4)
+        val limit = Semaphore(3)
         val pools = seeds.map { (seed, weight) ->
             async(Dispatchers.IO) {
                 limit.withPermit {

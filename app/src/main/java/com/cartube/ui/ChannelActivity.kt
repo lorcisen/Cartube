@@ -74,7 +74,7 @@ class ChannelActivity : AppCompatActivity() {
                 videos.submitList(sort.apply(allVideos))
             }.onFailure {
                 binding.error.isVisible = true
-                binding.error.text = getString(R.string.channel_failed, it.message ?: it.javaClass.simpleName)
+                binding.error.text = getString(R.string.channel_failed, describeError(it))
             }
         }
     }

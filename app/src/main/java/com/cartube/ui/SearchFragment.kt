@@ -238,7 +238,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 current.list.scrollToPosition(0)
             }.onFailure {
                 current.empty.isVisible = true
-                current.empty.text = getString(R.string.search_failed, it.message ?: it.javaClass.simpleName)
+                current.empty.text = getString(R.string.search_failed, requireContext().describeError(it))
             }
         }
     }

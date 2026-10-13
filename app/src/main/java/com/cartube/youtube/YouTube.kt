@@ -130,6 +130,7 @@ object YouTube {
         // YouTube retired its general trending page (what it still answers there ignores
         // the country), so "general" is built from the category lists, taking turns so no
         // single category dominates.
+        // One list at a time, to stay well under YouTube's request limits.
         val results = GENERAL_PARTS.map { id -> runCatching { kioskVideos(id, country) } }
         val lists = results.map { it.getOrDefault(emptyList()) }
         if (lists.all { it.isEmpty() }) results.firstNotNullOfOrNull { it.exceptionOrNull() }?.let { throw it }
@@ -156,8 +157,8 @@ object YouTube {
 
     /** Shorts from the given channels' Shorts tabs, newest first, mixed between channels. */
     suspend fun shorts(channels: List<Channel>, perChannel: Int = 8): List<VideoItem> = coroutineScope {
-        val limit = Semaphore(4)
-        channels.shuffled().take(12).map { channel ->
+        val limit = Semaphore(2)
+        channels.shuffled().take(8).map { channel ->
             async(Dispatchers.IO) {
                 limit.withPermit {
                     runCatching {
@@ -223,7 +224,7 @@ object YouTube {
      * refuses the feed or it comes back empty.
      */
     suspend fun feed(channels: List<Channel>): FeedResult = coroutineScope {
-        val limit = Semaphore(6)
+        val limit = Semaphore(4)
         val results = channels.map { channel ->
             async(Dispatchers.IO) {
                 limit.withPermit {

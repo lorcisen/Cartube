@@ -27,6 +27,7 @@ class OkHttpDownloader(private val client: OkHttpClient) : Downloader() {
 
         client.newCall(builder.build()).execute().use { response ->
             if (response.code == 429) {
+                RateLimit.hit()
                 throw ReCaptchaException("reCaptcha challenge requested", request.url())
             }
             return Response(

@@ -327,7 +327,7 @@ class MainActivity : AppCompatActivity() {
             }.onFailure {
                 MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle(R.string.import_failed)
-                    .setMessage(it.message ?: it.javaClass.simpleName)
+                    .setMessage(describeError(it))
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             }

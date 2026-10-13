@@ -26,6 +26,7 @@ class NewVideosWorker(context: Context, params: WorkerParameters) : CoroutineWor
 
     override suspend fun doWork(): Result {
         if (!Settings.notifyNewVideos || Library.subscriptions().isEmpty()) return Result.success()
+        if (com.cartube.net.RateLimit.active) return Result.retry()
         val prefs = applicationContext.getSharedPreferences("new_videos", Context.MODE_PRIVATE)
         val seen = prefs.getStringSet("seen", emptySet())!!.toMutableSet()
         val firstRun = !prefs.getBoolean("initialised", false)

@@ -117,7 +117,7 @@ class PlaylistActivity : AppCompatActivity() {
             result.onSuccess { show(it.name, it.uploader, it.thumbnail, it.videos) }
                 .onFailure {
                     binding.error.isVisible = true
-                    binding.error.text = getString(R.string.playlist_failed, it.message ?: it.javaClass.simpleName)
+                    binding.error.text = getString(R.string.playlist_failed, describeError(it))
                 }
         }
     }

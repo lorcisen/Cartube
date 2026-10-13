@@ -79,7 +79,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             }.onFailure {
                 adapter.submitList(emptyList())
                 current.error.isVisible = true
-                current.error.text = getString(R.string.trending_failed, it.message ?: it.javaClass.simpleName)
+                current.error.text = getString(R.string.trending_failed, requireContext().describeError(it))
             }
         }
     }

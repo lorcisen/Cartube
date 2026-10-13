@@ -59,8 +59,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         super.onDestroyView()
     }
 
-    private fun describe(error: Throwable?): String =
-        error?.message?.takeIf { it.isNotBlank() } ?: error?.javaClass?.simpleName ?: "?"
+    private fun describe(error: Throwable?): String = requireContext().describeError(error)
 
     private fun load(force: Boolean) {
         val b = binding ?: return
