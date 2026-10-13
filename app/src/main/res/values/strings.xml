@@ -237,4 +237,6 @@
     <string name="filter_medium">4–20 min</string>
     <string name="filter_long">Över 20 min</string>
     <string name="no_results_filter">Inga träffar med de här filtren.</string>
+    <string name="random">Slumpa</string>
+    <string name="random_nothing">Inga videor att slumpa bland än.</string>
 </resources>

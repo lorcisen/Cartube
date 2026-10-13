@@ -53,6 +53,7 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
         showContinue()
         b.refresh.setOnRefreshListener { load(force = true) }
         b.searchButton.setOnClickListener { (activity as? MainActivity)?.showSearch() }
+        b.randomChip.setOnClickListener { playRandom() }
         Recommendations.current?.let { show(it) }
         load(force = false)
     }
@@ -91,6 +92,18 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
         }
     }
 
+    /** Opens a random video from what is shown: the chosen category, or everything. */
+    private fun playRandom() {
+        val pool = adapter.currentList
+        if (pool.isEmpty()) {
+            android.widget.Toast.makeText(requireContext(), R.string.random_nothing, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Prefer something not seen yet; fall back to anything in the list.
+        val unseen = pool.filter { (Positions.progress(it.url) ?: 0f) < 0.05f }
+        requireContext().openVideo((unseen.ifEmpty { pool }).random())
+    }
+
     private fun show(result: Recommendations.Result) {
         val b = binding ?: return
         b.chips.removeAllViews()
@@ -109,7 +122,7 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
             }
             b.chips.addView(chip)
         }
-        b.chipScroll.isVisible = result.categories.isNotEmpty()
+        b.chips.isVisible = result.categories.isNotEmpty()
 
         val videos = selectedCategory?.let { k -> result.categories.first { it.key == k }.videos } ?: result.all
         adapter.submitList(videos)
