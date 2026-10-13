@@ -69,6 +69,14 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
     }
 
     private fun build(info: StreamInfo, item: MediaItem): MediaSource {
+        val main = buildMain(info, item)
+        val subtitles = runCatching { Subtitles.sources(info, liveData) }
+            .onFailure { Log.w(TAG, "Could not add subtitles", it) }
+            .getOrDefault(emptyList())
+        return if (subtitles.isEmpty()) main else MergingMediaSource(main, *subtitles.toTypedArray())
+    }
+
+    private fun buildMain(info: StreamInfo, item: MediaItem): MediaSource {
         val live = info.streamType == StreamType.LIVE_STREAM ||
             info.streamType == StreamType.AUDIO_LIVE_STREAM
         if (live && !info.hlsUrl.isNullOrEmpty()) {

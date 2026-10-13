@@ -67,4 +67,26 @@
         <item>selfpromo</item>
         <item>interaction</item>
     </string-array>
+    <string-array name="subtitle_labels">
+        <item>Svenska (översätts när det behövs)</item>
+        <item>Videons originalspråk</item>
+        <item>Av</item>
+    </string-array>
+    <string-array name="subtitle_values">
+        <item>sv</item>
+        <item>original</item>
+        <item>off</item>
+    </string-array>
+    <string-array name="subtitle_size_labels">
+        <item>Liten</item>
+        <item>Normal</item>
+        <item>Stor</item>
+        <item>Mycket stor</item>
+    </string-array>
+    <string-array name="subtitle_size_values">
+        <item>0.042</item>
+        <item>0.0533</item>
+        <item>0.068</item>
+        <item>0.085</item>
+    </string-array>
 </resources>

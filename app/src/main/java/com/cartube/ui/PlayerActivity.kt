@@ -38,6 +38,8 @@ import com.cartube.data.Library
 import com.cartube.databinding.ActivityPlayerBinding
 import com.cartube.databinding.PlayerHeaderBinding
 import com.cartube.data.Settings as AppSettings
+import android.graphics.Color
+import androidx.media3.ui.CaptionStyleCompat
 import com.cartube.net.Dislikes
 import com.cartube.player.PlaybackService
 import com.cartube.player.YoutubeMediaSourceFactory
@@ -136,6 +138,7 @@ class PlayerActivity : AppCompatActivity() {
         binding.details.adapter = ConcatAdapter(header, related)
         binding.playerView.setFullscreenButtonClickListener { setFullscreen(it) }
         PlayerGestures(this, binding.playerView, binding.gestureIndicator) { controller }.attach()
+        styleSubtitles()
         runCatching { CastButtonFactory.setUpMediaRouteButton(applicationContext, binding.castButton) }
 
         if (savedInstanceState == null) pendingItem = VideoItem.fromIntent(intent)
@@ -170,11 +173,6 @@ class PlayerActivity : AppCompatActivity() {
             if (pending != null) play(ready, pending) else ready.currentMediaItem?.let { showFromPlayer(it) }
             updatePipParams()
         }, ContextCompat.getMainExecutor(this))
-    }
-
-    override fun onResume() {
-        super.onResume()
-        orientationListener.enable()
     }
 
     override fun onPause() {
@@ -264,6 +262,32 @@ class PlayerActivity : AppCompatActivity() {
             ).joinToString("   ").ifBlank { null }
             header.notifyItemChanged(0)
         }
+    }
+
+    /** White text on a dark box: readable on any picture, like YouTube's own captions. */
+    private fun styleSubtitles() {
+        binding.playerView.subtitleView?.apply {
+            setApplyEmbeddedStyles(false)
+            setApplyEmbeddedFontSizes(false)
+            setStyle(
+                CaptionStyleCompat(
+                    Color.WHITE,
+                    0xB3000000.toInt(),
+                    Color.TRANSPARENT,
+                    CaptionStyleCompat.EDGE_TYPE_NONE,
+                    Color.TRANSPARENT,
+                    null,
+                ),
+            )
+            setFractionalTextSize(AppSettings.subtitleSize)
+            setBottomPaddingFraction(0.06f)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        orientationListener.enable()
+        styleSubtitles()
     }
 
     private fun pickQuality() {

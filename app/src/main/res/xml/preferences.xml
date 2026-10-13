@@ -35,6 +35,23 @@
             app:title="@string/pref_gestures" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/pref_subtitles_category">
+        <ListPreference
+            app:defaultValue="sv"
+            app:entries="@array/subtitle_labels"
+            app:entryValues="@array/subtitle_values"
+            app:key="subtitles"
+            app:title="@string/pref_subtitles"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:defaultValue="0.0533"
+            app:entries="@array/subtitle_size_labels"
+            app:entryValues="@array/subtitle_size_values"
+            app:key="subtitle_size"
+            app:title="@string/pref_subtitle_size"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/pref_sponsorblock">
         <SwitchPreferenceCompat
             app:defaultValue="true"

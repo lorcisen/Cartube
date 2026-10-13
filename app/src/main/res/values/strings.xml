@@ -113,6 +113,9 @@
     <string name="pref_sponsorblock_categories">Vad ska hoppas över</string>
     <string name="pref_dislikes">Visa ogillanden</string>
     <string name="pref_dislikes_summary">Från Return YouTube Dislike</string>
+    <string name="pref_subtitles_category">Undertexter</string>
+    <string name="pref_subtitles">Undertexter som standard</string>
+    <string name="pref_subtitle_size">Textstorlek</string>
     <string name="pref_appearance">Utseende</string>
     <string name="pref_theme">Tema</string>
     <string name="pref_amoled">AMOLED-svart</string>

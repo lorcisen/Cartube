@@ -18,7 +18,8 @@
             android:layout_gravity="center"
             android:minHeight="220dp"
             app:resize_mode="fit"
-            app:show_buffering="never" />
+            app:show_buffering="never"
+            app:show_subtitle_button="true" />
 
         <ProgressBar
             android:id="@+id/loading"

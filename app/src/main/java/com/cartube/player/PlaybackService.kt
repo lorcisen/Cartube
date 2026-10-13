@@ -75,6 +75,7 @@ class PlaybackService : MediaLibraryService() {
             if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
                 session?.player?.setPlaybackSpeed(Settings.defaultSpeed)
             }
+            applySubtitlePreference()
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -111,6 +112,7 @@ class PlaybackService : MediaLibraryService() {
         carConnection = CarConnection(this).type
         carConnection.observeForever(carObserver)
 
+        applySubtitlePreference()
         skipper = SegmentSkipper(this, scope)
         skipper.attach(exoPlayer)
         exoPlayer.addListener(playerListener)
@@ -149,6 +151,15 @@ class PlaybackService : MediaLibraryService() {
         }
         session = null
         super.onDestroy()
+    }
+
+    /** The chosen subtitle track carries the default flag (see Subtitles); "off" shows none. */
+    private fun applySubtitlePreference() {
+        val off = Settings.subtitles == Settings.SUBTITLES_OFF
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
+            .setPreferredTextLanguage(if (Settings.subtitles == Settings.SUBTITLES_SWEDISH) "sv" else null)
+            .setIgnoredTextSelectionFlags(if (off) C.SELECTION_FLAG_DEFAULT else 0)
+            .build()
     }
 
     private fun setVideoEnabled(enabled: Boolean) {

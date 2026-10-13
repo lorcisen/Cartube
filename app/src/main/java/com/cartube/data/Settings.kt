@@ -16,6 +16,11 @@ object Settings {
     const val KEY_SPONSORBLOCK_CATEGORIES = "sponsorblock_categories"
     const val KEY_DISLIKES = "show_dislikes"
     const val KEY_GESTURES = "gestures"
+    const val KEY_SUBTITLES = "subtitles"
+    const val SUBTITLES_SWEDISH = "sv"
+    const val SUBTITLES_ORIGINAL = "original"
+    const val SUBTITLES_OFF = "off"
+    const val KEY_SUBTITLE_SIZE = "subtitle_size"
     const val KEY_THEME = "theme"
     const val KEY_AMOLED = "amoled"
     const val KEY_DYNAMIC_COLOR = "dynamic_color"
@@ -55,6 +60,9 @@ object Settings {
             ?: DEFAULT_SPONSOR_CATEGORIES
     val showDislikes: Boolean get() = prefs.getBoolean(KEY_DISLIKES, true)
     val gestures: Boolean get() = prefs.getBoolean(KEY_GESTURES, true)
+    val subtitles: String get() = prefs.getString(KEY_SUBTITLES, SUBTITLES_SWEDISH) ?: SUBTITLES_SWEDISH
+    /** Subtitle height as a fraction of the video height. */
+    val subtitleSize: Float get() = prefs.getString(KEY_SUBTITLE_SIZE, "0.0533")?.toFloatOrNull() ?: 0.0533f
     val amoled: Boolean get() = prefs.getBoolean(KEY_AMOLED, false)
     val dynamicColor: Boolean get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
 
