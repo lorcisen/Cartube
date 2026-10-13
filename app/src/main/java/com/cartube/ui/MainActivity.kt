@@ -100,13 +100,12 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.import_title)
             .setMessage(R.string.import_instructions)
-            .setNeutralButton(R.string.import_open_takeout) { _, _ ->
+            .setNegativeButton(R.string.import_open_takeout) { _, _ ->
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TAKEOUT_URL)))
             }
             .setPositiveButton(R.string.import_pick_file) { _, _ ->
                 pickTakeoutFile.launch(arrayOf("*/*"))
             }
-            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

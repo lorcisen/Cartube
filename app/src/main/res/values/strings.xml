@@ -26,7 +26,12 @@
     <string name="feed_failed">Kunde inte hämta flödet: %1$s</string>
 
     <string name="import_title">Importera från YouTube</string>
-    <string name="import_instructions">CarTube loggar inte in på ditt Google-konto. Istället hämtar du listan över kanaler du prenumererar på från Google Takeout:\n\n1. Tryck Öppna Takeout och logga in.\n2. Under YouTube och YouTube Music: tryck \"Alla YouTube-data ingår\", avmarkera allt utom \"prenumerationer\".\n3. Skapa exporten och ladda ner zip-filen när Google mejlar dig (brukar ta några minuter).\n4. Kom tillbaka hit, tryck Välj fil och välj zip-filen (eller subscriptions.csv).</string>
+    <string name="import_instructions">Hämta listan över dina YouTube-kanaler från Google Takeout:
+
+1. Tryck Öppna Takeout.
+2. Välj bara YouTube och sedan bara \"prenumerationer\".
+3. Skapa exporten och ladda ner zip-filen.
+4. Kom tillbaka hit och tryck Välj fil.</string>
     <string name="import_open_takeout">Öppna Takeout</string>
     <string name="import_pick_file">Välj fil</string>
     <string name="import_done">%1$d nya kanaler importerade (%2$d i filen).</string>
