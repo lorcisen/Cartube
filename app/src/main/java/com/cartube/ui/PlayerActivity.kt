@@ -37,7 +37,7 @@ import com.cartube.R
 import com.cartube.data.Library
 import com.cartube.databinding.ActivityPlayerBinding
 import com.cartube.databinding.PlayerHeaderBinding
-import com.cartube.data.Settings
+import com.cartube.data.Settings as AppSettings
 import com.cartube.net.Dislikes
 import com.cartube.player.PlaybackService
 import com.cartube.player.YoutubeMediaSourceFactory
@@ -254,7 +254,7 @@ class PlayerActivity : AppCompatActivity() {
             related.submitList(YouTube.related(info))
 
             val id = videoIdOf(info.url)
-            val fetched = if (Settings.showDislikes && id != null) Dislikes.votes(id) else null
+            val fetched = if (AppSettings.showDislikes && id != null) Dislikes.votes(id) else null
             if (shown?.url != info.url) return@launch
             val likes = info.likeCount.takeIf { it >= 0 } ?: fetched?.likes?.takeIf { it >= 0 }
             val dislikes = fetched?.dislikes?.takeIf { it >= 0 }
@@ -274,13 +274,13 @@ class PlayerActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.quality_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
-        val current = Settings.maxHeightFor(item.url)
+        val current = AppSettings.maxHeightFor(item.url)
         val selected = heights.indexOfFirst { it <= current }.coerceAtLeast(0)
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.quality)
             .setSingleChoiceItems(heights.map { "${it}p" }.toTypedArray(), selected) { dialog, which ->
                 dialog.dismiss()
-                Settings.overrideQuality(item.url, heights[which])
+                AppSettings.overrideQuality(item.url, heights[which])
                 val c = controller ?: return@setSingleChoiceItems
                 val position = c.currentPosition
                 val playing = c.playWhenReady
