@@ -6,6 +6,8 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.cartube.R
+import com.cartube.data.Library
+import com.cartube.data.Positions
 import com.cartube.data.Recommendations
 import com.cartube.databinding.FragmentForYouBinding
 import com.google.android.material.chip.Chip
@@ -23,10 +25,31 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
         onClick = { requireContext().openVideo(it) },
     )
 
+    private val continueAdapter = VideoAdapter(
+        showUploader = false,
+        itemWidthDp = 220,
+        onClick = { requireContext().openVideo(it) },
+    )
+
+    private fun showContinue() {
+        val b = binding ?: return
+        val items = Positions.unfinished(Library.history()).take(15)
+        continueAdapter.submitList(items)
+        b.continueTitle.isVisible = items.isNotEmpty()
+        b.continueList.isVisible = items.isNotEmpty()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        showContinue()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = FragmentForYouBinding.bind(view)
         binding = b
         b.list.adapter = adapter
+        b.continueList.adapter = continueAdapter
+        showContinue()
         b.refresh.setOnRefreshListener { load(force = true) }
         b.searchButton.setOnClickListener { (activity as? MainActivity)?.showSearch() }
         Recommendations.current?.let { show(it) }
@@ -36,7 +59,10 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         // Picks up newly watched videos when coming back to the tab.
-        if (!hidden) load(force = false)
+        if (!hidden) {
+            load(force = false)
+            showContinue()
+        }
     }
 
     override fun onDestroyView() {

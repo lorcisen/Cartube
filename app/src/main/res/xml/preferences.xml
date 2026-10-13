@@ -35,6 +35,24 @@
             app:title="@string/pref_gestures" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/pref_audio">
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="audio_only"
+            app:summary="@string/pref_audio_only_summary"
+            app:title="@string/pref_audio_only" />
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="normalize_volume"
+            app:summary="@string/pref_normalize_summary"
+            app:title="@string/pref_normalize" />
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="clear_speech"
+            app:summary="@string/pref_clear_speech_summary"
+            app:title="@string/pref_clear_speech" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/pref_subtitles_category">
         <ListPreference
             app:defaultValue="sv"
@@ -65,6 +83,12 @@
             app:entryValues="@array/sponsor_values"
             app:key="sponsorblock_categories"
             app:title="@string/pref_sponsorblock_categories" />
+        <Preference
+            app:key="blocked"
+            app:title="@string/pref_blocked" />
+        <Preference
+            app:key="clear_search_history"
+            app:title="@string/search_history_clear" />
         <SwitchPreferenceCompat
             app:defaultValue="true"
             app:key="show_dislikes"

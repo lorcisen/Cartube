@@ -117,6 +117,31 @@
                 app:icon="@drawable/ic_fullscreen" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/audioOnly"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/audio_only"
+                app:icon="@drawable/ic_headphones" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/queueButton"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/queue"
+                app:icon="@drawable/ic_queue" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/downloadButton"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/download"
+                app:icon="@drawable/ic_download" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/quality"
                 style="@style/CarTube.ActionButton"
                 android:layout_width="wrap_content"
@@ -133,6 +158,52 @@
                 app:icon="@drawable/ic_timer" />
         </LinearLayout>
     </HorizontalScrollView>
+
+    <TextView
+        android:id="@+id/chaptersTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:text="@string/chapters"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
+        android:visibility="gone" />
+
+    <HorizontalScrollView
+        android:id="@+id/chaptersScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chapters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            app:singleLine="true" />
+    </HorizontalScrollView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/commentsCard"
+        style="@style/Widget.Material3.CardView.Filled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/commentsLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:drawablePadding="12dp"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:text="@string/comments"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            app:drawableStartCompat="@drawable/ic_comment"
+            app:drawableTint="?attr/colorOnSurface" />
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/description"

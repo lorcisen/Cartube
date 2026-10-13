@@ -369,11 +369,12 @@ class PlaybackService : MediaLibraryService() {
     private suspend fun search(query: String): List<VideoItem> =
         searchResults[query] ?: YouTube.search(query).also { searchResults[query] = it }
 
-    private fun folder(id: String, title: String) = MediaItem.Builder()
+    private fun folder(id: String, title: String, artwork: String? = null) = MediaItem.Builder()
         .setMediaId(id)
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(title)
+                .setArtworkUri(artwork?.let(android.net.Uri::parse))
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_VIDEOS)
@@ -429,19 +430,44 @@ class PlaybackService : MediaLibraryService() {
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
             val children = when (parentId) {
-                ROOT -> listOf(
+                ROOT -> listOfNotNull(
                     folder(FOR_YOU, getString(R.string.nav_for_you)),
+                    folder(CONTINUE, getString(R.string.continue_watching))
+                        .takeIf { Positions.unfinished(Library.history()).isNotEmpty() },
+                    folder(QUEUE, getString(R.string.queue)).takeIf { PlayQueue.upcoming().isNotEmpty() },
                     folder(FEED, getString(R.string.nav_home)),
+                    folder(CHANNELS, getString(R.string.tab_subscriptions)),
+                    folder(PLAYLISTS, getString(R.string.playlists)),
+                    folder(DOWNLOADS, getString(R.string.downloads)),
                     folder(FAVORITES, getString(R.string.tab_favorites)),
                     folder(HISTORY, getString(R.string.tab_history)),
                 )
+                CONTINUE -> Positions.unfinished(Library.history()).map { it.toMediaItem() }
+                QUEUE -> PlayQueue.upcoming().map { it.toMediaItem() }
+                CHANNELS -> Library.subscriptions().map { folder(CHANNEL_PREFIX + it.url, it.name, it.avatar) }
+                PLAYLISTS -> Library.playlists().map { folder(PLAYLIST_PREFIX + it.id, it.name, it.videos.firstOrNull()?.thumbnail) }
+                DOWNLOADS -> runCatching { Downloads.entries() }.getOrDefault(emptyList())
+                    .filter { it.done }.map { it.video.toMediaItem() }
                 FOR_YOU -> runCatching { Recommendations.load().all }
                     .getOrElse { Recommendations.current?.all.orEmpty() }
                     .take(50).map { it.toMediaItem() }
                 FEED -> runCatching { Feed.load().videos }.getOrDefault(Feed.cached).map { it.toMediaItem() }
                 FAVORITES -> Library.favorites().map { it.toMediaItem() }
                 HISTORY -> Library.history().map { it.toMediaItem() }
-                else -> return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                else -> when {
+                    parentId.startsWith(CHANNEL_PREFIX) -> runCatching {
+                        YouTube.channel(parentId.removePrefix(CHANNEL_PREFIX)).videos
+                    }.getOrDefault(emptyList()).map { it.toMediaItem() }
+                    parentId.startsWith(PLAYLIST_PREFIX) -> {
+                        val playlist = Library.playlist(parentId.removePrefix(PLAYLIST_PREFIX))
+                            ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                        val videos = playlist.sourceUrl?.let { url ->
+                            runCatching { YouTube.playlist(url, limit = 100).videos }.getOrDefault(emptyList())
+                        } ?: playlist.videos
+                        videos.map { it.toMediaItem() }
+                    }
+                    else -> return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                }
             }
             LibraryResult.ofItemList(ImmutableList.copyOf(children.page(page, pageSize)), params)
         }
@@ -539,6 +565,13 @@ class PlaybackService : MediaLibraryService() {
         private const val FOR_YOU = "for_you"
         private const val FEED = "feed"
         private const val FAVORITES = "favorites"
+        private const val CONTINUE = "continue"
+        private const val QUEUE = "queue"
+        private const val CHANNELS = "channels"
+        private const val PLAYLISTS = "playlists"
+        private const val DOWNLOADS = "downloads"
+        private const val CHANNEL_PREFIX = "channel:"
+        private const val PLAYLIST_PREFIX = "playlist:"
         private const val HISTORY = "history"
     }
 }

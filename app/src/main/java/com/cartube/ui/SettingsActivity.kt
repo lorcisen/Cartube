@@ -6,6 +6,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceFragmentCompat
 import com.cartube.BuildConfig
 import com.cartube.R
+import com.cartube.data.Library
+import com.cartube.data.SearchHistory
 import com.cartube.data.Settings
 import com.cartube.data.Updates
 import android.widget.Toast
@@ -32,9 +34,36 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+        private fun showBlocked() {
+            val blocked = Library.blockedChannels()
+            if (blocked.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.blocked_none, Toast.LENGTH_SHORT).show()
+                return
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.blocked_channels)
+                .setItems(blocked.map { it.name }.toTypedArray()) { _, which ->
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setMessage(blocked[which].name)
+                        .setPositiveButton(R.string.unblock) { _, _ -> Library.unblockChannel(blocked[which].url) }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                }
+                .show()
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
             findPreference<androidx.preference.Preference>("version")?.summary = BuildConfig.VERSION_NAME
+            findPreference<androidx.preference.Preference>("blocked")?.setOnPreferenceClickListener {
+                showBlocked()
+                true
+            }
+            findPreference<androidx.preference.Preference>("clear_search_history")?.setOnPreferenceClickListener {
+                SearchHistory.clear()
+                Toast.makeText(requireContext(), R.string.search_history_cleared, Toast.LENGTH_SHORT).show()
+                true
+            }
             findPreference<androidx.preference.Preference>("check_update")?.setOnPreferenceClickListener {
                 lifecycleScope.launch {
                     val update = Updates.check(requireContext(), force = true)

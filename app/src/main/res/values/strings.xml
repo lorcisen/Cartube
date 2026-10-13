@@ -202,7 +202,9 @@
     <string name="pref_audio_only_summary">Spela bara ljudet, sparar data och batteri</string>
 
     <!-- Search -->
+    <string name="search_fill">Fyll i sökfältet</string>
     <string name="search_history_clear">Rensa sökhistorik</string>
+    <string name="search_history_cleared">Sökhistoriken är rensad</string>
     <string name="pref_blocked">Blockerade kanaler</string>
 
     <!-- Widget -->

@@ -41,7 +41,9 @@ import com.cartube.data.Settings as AppSettings
 import android.graphics.Color
 import androidx.media3.ui.CaptionStyleCompat
 import com.cartube.net.Dislikes
+import com.cartube.player.PlayQueue
 import com.cartube.player.PlaybackService
+import org.schabi.newpipe.extractor.stream.StreamSegment
 import com.cartube.player.YoutubeMediaSourceFactory
 import com.cartube.youtube.StreamCache
 import com.cartube.youtube.videoIdOf
@@ -71,6 +73,8 @@ class PlayerActivity : AppCompatActivity() {
     private var subscribers = -1L
     private var description: CharSequence? = null
     private var votes: String? = null
+    private var chapters: List<StreamSegment> = emptyList()
+    private var commentsLabel: String? = null
     private var descriptionExpanded = false
     private var detailsJob: Job? = null
 
@@ -235,6 +239,9 @@ class PlayerActivity : AppCompatActivity() {
             subscribers = -1
             description = null
             votes = null
+            chapters = emptyList()
+            commentsLabel = null
+            binding.playerView.setExtraAdGroupMarkers(null, null)
             descriptionExpanded = false
             related.submitList(emptyList())
         }
@@ -248,6 +255,10 @@ class PlayerActivity : AppCompatActivity() {
             shown = info.toVideoItem()
             subscribers = info.uploaderSubscriberCount
             description = info.description?.let { renderDescription(it) }
+            chapters = info.streamSegments.orEmpty()
+            // Chapter starts as markers on the time bar.
+            val marks = chapters.map { it.startTimeSeconds * 1000L }.filter { it > 0 }.toLongArray()
+            binding.playerView.setExtraAdGroupMarkers(marks, BooleanArray(marks.size))
             header.notifyItemChanged(0)
             related.submitList(YouTube.related(info))
 
@@ -288,6 +299,25 @@ class PlayerActivity : AppCompatActivity() {
         super.onResume()
         orientationListener.enable()
         styleSubtitles()
+    }
+
+    private fun showQueue() {
+        val upcoming = PlayQueue.upcoming()
+        if (upcoming.isEmpty()) {
+            Toast.makeText(this, R.string.queue_empty, Toast.LENGTH_LONG).show()
+            return
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.queue)
+            .setItems(upcoming.map { it.title }.toTypedArray()) { _, which ->
+                // Jump to that video; the ones before it stay queued.
+                val chosen = upcoming[which]
+                PlayQueue.remove(chosen.url)
+                playNew(chosen)
+            }
+            .setNeutralButton(R.string.queue_clear) { _, _ -> PlayQueue.clear() }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun pickQuality() {
@@ -415,6 +445,30 @@ class PlayerActivity : AppCompatActivity() {
             }
             b.share.setOnClickListener { shareVideo(item) }
             b.quality.setOnClickListener { pickQuality() }
+            b.audioOnly.isChecked = AppSettings.audioOnly
+            b.audioOnly.setOnClickListener {
+                AppSettings.audioOnly = !AppSettings.audioOnly
+                b.audioOnly.isChecked = AppSettings.audioOnly
+                if (AppSettings.audioOnly) Toast.makeText(this@PlayerActivity, R.string.audio_only_on, Toast.LENGTH_SHORT).show()
+            }
+            b.queueButton.setOnClickListener { showQueue() }
+            b.downloadButton.setOnClickListener { DownloadDialog.show(this@PlayerActivity, item) }
+            b.commentsLabel.text = commentsLabel ?: getString(R.string.comments)
+            b.commentsCard.setOnClickListener { CommentsSheet.show(this@PlayerActivity, item.url) }
+
+            b.chaptersTitle.isVisible = chapters.isNotEmpty()
+            b.chaptersScroll.isVisible = chapters.isNotEmpty()
+            b.chapters.removeAllViews()
+            for (chapter in chapters) {
+                val chip = com.google.android.material.chip.Chip(this@PlayerActivity).apply {
+                    text = "${formatDuration(chapter.startTimeSeconds.toLong()).ifEmpty { "0:00" }}  ${chapter.title}"
+                    setOnClickListener {
+                        controller?.seekTo(chapter.startTimeSeconds * 1000L)
+                        controller?.play()
+                    }
+                }
+                b.chapters.addView(chip)
+            }
             b.sleepTimer.setOnClickListener { pickSleepTimer() }
             b.votes.isVisible = votes != null
             b.votes.text = votes

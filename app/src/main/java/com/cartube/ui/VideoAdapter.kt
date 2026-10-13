@@ -31,6 +31,8 @@ class VideoAdapter(
     private val showUploader: Boolean = true,
     private val onChannelClick: ((VideoItem) -> Unit)? = null,
     private val onLongClick: ((VideoItem) -> Unit)? = null,
+    /** For horizontal rows: fixed card width instead of filling the screen. */
+    private val itemWidthDp: Int? = null,
     private val onClick: (VideoItem) -> Unit,
 ) : ListAdapter<VideoItem, VideoAdapter.Holder>(Diff) {
 
@@ -54,6 +56,11 @@ class VideoAdapter(
         val holder = Holder(LayoutInflater.from(parent.context).inflate(layout, parent, false))
         holder.frame.setAspectRatio(16f / 9f)
         holder.progress.max = 1000
+        itemWidthDp?.let { dp ->
+            holder.itemView.layoutParams = holder.itemView.layoutParams.apply {
+                width = (dp * parent.resources.displayMetrics.density).toInt()
+            }
+        }
         return holder
     }
 

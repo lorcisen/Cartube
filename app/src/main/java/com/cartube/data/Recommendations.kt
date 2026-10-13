@@ -129,11 +129,14 @@ object Recommendations {
                 c.score += weight / (1 + rank * 0.15)
             }
         }
+        val disliked = Library.notInterestedChannels()
+        val hidden = Library.hiddenFilter()
         for (c in candidates.values) {
             if (c.video.uploaderUrl in subscribed) c.score *= 1.3
             else if (c.video.uploaderUrl in knownChannels) c.score *= 1.15
+            c.video.uploaderUrl?.let { disliked[it] }?.let { times -> c.score *= Math.pow(0.4, times.toDouble()) }
         }
-        spreadChannels(candidates.values.sortedByDescending { it.score }.map { it.video })
+        spreadChannels(candidates.values.filterNot { hidden(it.video) }.sortedByDescending { it.score }.map { it.video })
     }
 
     private fun group(all: List<VideoItem>): Result {

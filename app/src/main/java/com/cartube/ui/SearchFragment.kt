@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.cartube.R
 import com.cartube.databinding.FragmentSearchBinding
+import com.cartube.data.SearchHistory
 import com.cartube.youtube.Channel
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -35,9 +36,61 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private val showingChannels get() = binding?.chipChannels?.isChecked == true
     private val showingPlaylists get() = binding?.chipPlaylists?.isChecked == true
 
+    private var suggestJob: Job? = null
+    private val suggestionAdapter = SuggestionAdapter(
+        onPick = { query ->
+            binding?.searchInput?.setText(query)
+            search(query)
+        },
+        onFill = { query ->
+            binding?.searchInput?.apply {
+                setText("$query ")
+                setSelection(text?.length ?: 0)
+            }
+        },
+        onRemove = { query ->
+            SearchHistory.remove(query)
+            updateSuggestions(binding?.searchInput?.text?.toString().orEmpty())
+        },
+    )
+
+    /** History when the box is empty, otherwise YouTube's suggestions (after a short pause). */
+    private fun updateSuggestions(text: String) {
+        val b = binding ?: return
+        suggestJob?.cancel()
+        val query = text.trim()
+        if (query.isEmpty()) {
+            suggestionAdapter.submit(SearchHistory.all().map { SuggestionAdapter.Row(it, true) })
+            return
+        }
+        val fromHistory = SearchHistory.all().filter { it.contains(query, ignoreCase = true) }.take(3)
+        suggestionAdapter.submit(fromHistory.map { SuggestionAdapter.Row(it, true) })
+        suggestJob = viewLifecycleOwner.lifecycleScope.launch {
+            kotlinx.coroutines.delay(250)
+            val live = YouTube.suggestions(query).filterNot { s -> fromHistory.any { it.equals(s, true) } }
+            if (binding === b) {
+                suggestionAdapter.submit(
+                    fromHistory.map { SuggestionAdapter.Row(it, true) } + live.map { SuggestionAdapter.Row(it, false) },
+                )
+            }
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = FragmentSearchBinding.bind(view)
         binding = b
+        b.suggestions.adapter = suggestionAdapter
+        b.searchInput.setOnFocusChangeListener { _, focused ->
+            b.suggestions.isVisible = focused
+            if (focused) updateSuggestions(b.searchInput.text?.toString().orEmpty())
+        }
+        b.searchInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (b.searchInput.hasFocus()) updateSuggestions(s?.toString().orEmpty())
+            }
+        })
         b.searchInput.setOnEditorActionListener { _, actionId, event ->
             val enter = event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN
             if (actionId == EditorInfo.IME_ACTION_SEARCH || enter) {
@@ -109,6 +162,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             return
         }
         lastQuery = query
+        SearchHistory.add(query)
+        b.suggestions.isVisible = false
         hideKeyboard()
         searchJob?.cancel()
         b.progress.isVisible = true

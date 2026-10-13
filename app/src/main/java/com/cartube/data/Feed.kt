@@ -16,6 +16,26 @@ object Feed {
 
     val cached: List<VideoItem> get() = items
 
+    private var prefs: android.content.SharedPreferences? = null
+    private var appContext: android.content.Context? = null
+
+    /** Loads the last fetched feed from disk, so the home screen and widget have something at once. */
+    fun init(context: android.content.Context) {
+        appContext = context.applicationContext
+        prefs = context.getSharedPreferences("feed", android.content.Context.MODE_PRIVATE)
+        items = saved()
+    }
+
+    fun saved(): List<VideoItem> {
+        val array = org.json.JSONArray(prefs?.getString("items", "[]") ?: "[]")
+        return (0 until array.length()).map { VideoItem.fromJson(array.getJSONObject(it)) }
+    }
+
+    private fun persist(videos: List<VideoItem>) {
+        prefs?.edit()?.putString("items", org.json.JSONArray(videos.take(30).map { it.toJson() }).toString())?.apply()
+        appContext?.let { com.cartube.widget.LatestWidget.refresh(it) }
+    }
+
     fun invalidate() {
         fetchedAt = 0
     }
@@ -28,6 +48,7 @@ object Feed {
         val result = YouTube.feed(Library.subscriptions())
         lastResult = result
         items = result.videos
+        if (result.videos.isNotEmpty()) persist(result.videos)
         // Only keep a result that found something; otherwise retry next time.
         fetchedAt = if (result.videos.isNotEmpty()) System.currentTimeMillis() else 0
         result
