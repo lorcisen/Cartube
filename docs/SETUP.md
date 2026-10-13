@@ -9,10 +9,9 @@ APK:n signeras med en hemlig nyckel som bara finns i repots krypterade Secrets, 
 Utan den publiceras ingen ny version på releasesidan.
 
 1. Öppna repot på GitHub → **Settings** → **Secrets and variables** → **Actions**.
-2. Tryck **New repository secret** och lägg till:
-   - Namn `SIGNING_KEYSTORE_BASE64`, värde: hela innehållet i `keystore-base64.txt`.
-   - Namn `SIGNING_PASSWORD`, värde: lösenordet i `password.txt`.
-3. Spara de två filerna på ett säkert ställe (t.ex. en lösenordshanterare). Förlorar du
+2. Tryck **New repository secret**. Namn: `CARTUBE_SIGNING`. Värde: hela innehållet i
+   nyckelfilen (`cartube-signeringsnyckel.txt`), precis som den är.
+3. Spara filen på ett säkert ställe (t.ex. en lösenordshanterare). Förlorar du
    nyckeln kan befintliga installationer inte uppdateras, bara installeras om.
 
 Fingeravtryck (SHA-1) för nyckeln, som behövs i steg 2:
