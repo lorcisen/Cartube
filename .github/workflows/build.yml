@@ -46,7 +46,8 @@ jobs:
 
       - name: Show build errors
         if: failure()
-        run: grep -E "^e: |error:|ERROR:" build.log | head -40
+        run: |
+          grep -E "^e: |error:|ERROR:" build.log | head -40
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk CarTube.apk
