@@ -101,6 +101,14 @@
                 app:icon="@drawable/ic_favorite_border" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/downloadButton"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/download"
+                app:icon="@drawable/ic_download" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/share"
                 style="@style/CarTube.ActionButton"
                 android:layout_width="wrap_content"
@@ -133,13 +141,6 @@
                 android:text="@string/queue"
                 app:icon="@drawable/ic_queue" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/downloadButton"
-                style="@style/CarTube.ActionButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/download"
-                app:icon="@drawable/ic_download" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/quality"
