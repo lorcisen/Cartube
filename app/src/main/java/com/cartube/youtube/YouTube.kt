@@ -20,6 +20,7 @@ import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.feed.FeedInfo
 import org.schabi.newpipe.extractor.localization.ContentCountry
+import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -124,14 +125,14 @@ object YouTube {
      * "trending_movies_and_shows", "trending_podcasts_episodes", "live") for a country code.
      */
     suspend fun trending(kioskId: String, country: String): List<VideoItem> = withContext(Dispatchers.IO) {
-        val direct = runCatching { kioskVideos(kioskId, country) }
-        val videos = direct.getOrNull().orEmpty()
-        if (videos.isNotEmpty() || kioskId != GENERAL_TRENDING) return@withContext direct.getOrThrow()
+        if (kioskId != GENERAL_TRENDING) return@withContext kioskVideos(kioskId, country)
 
-        // YouTube retired its general trending page; build "general" from the category
-        // lists instead, taking turns so no single category dominates.
-        val lists = GENERAL_PARTS.map { id -> runCatching { kioskVideos(id, country) }.getOrDefault(emptyList()) }
-        if (lists.all { it.isEmpty() }) direct.getOrThrow()
+        // YouTube retired its general trending page (what it still answers there ignores
+        // the country), so "general" is built from the category lists, taking turns so no
+        // single category dominates.
+        val results = GENERAL_PARTS.map { id -> runCatching { kioskVideos(id, country) } }
+        val lists = results.map { it.getOrDefault(emptyList()) }
+        if (lists.all { it.isEmpty() }) results.firstNotNullOfOrNull { it.exceptionOrNull() }?.let { throw it }
         val mixed = ArrayList<VideoItem>()
         for (i in 0 until lists.maxOf { it.size }) lists.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
         mixed.distinctBy { it.url }
@@ -141,6 +142,8 @@ object YouTube {
     private fun kioskVideos(kioskId: String, country: String): List<VideoItem> {
         val extractor = service.kioskList.getExtractorById(kioskId, null)
         extractor.forceContentCountry(ContentCountry(country))
+        // Language too, so YouTube doesn't fall back to a list for some other audience.
+        extractor.forceLocalization(Localization(if (country == "SE") "sv" else "en", country))
         extractor.fetchPage()
         return extractor.initialPage.items
             .filterIsInstance<StreamInfoItem>()
