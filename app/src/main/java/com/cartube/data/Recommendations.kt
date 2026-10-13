@@ -1,5 +1,7 @@
 package com.cartube.data
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
 import kotlinx.coroutines.Dispatchers
@@ -10,12 +12,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import org.json.JSONObject
 
 /**
  * A home page built on the device from what you watch, since YouTube's own
  * recommendations need a signed-in account. Recently watched and favourite videos are
- * used as seeds; their "related videos" are pooled, scored and grouped by the seed's
- * YouTube category (Music, Sports, Education ...).
+ * used as seeds; their "related videos" are pooled and scored.
+ *
+ * Category chips use each recommended video's *own* YouTube category. Search results
+ * don't include it, so it is looked up per video in [refine] and remembered on disk.
  */
 object Recommendations {
 
@@ -26,10 +31,14 @@ object Recommendations {
         val all: List<VideoItem>,
         /** Per-category rows; only categories with enough videos. */
         val categories: List<Category>,
+        /** True while some videos' categories are still unknown. */
+        val categoriesPending: Boolean,
     )
 
     private const val MAX_SEEDS = 12
     private const val MAX_AGE_MS = 30 * 60 * 1000L
+    private const val CATEGORIZE_TOP = 60
+    private const val MIN_PER_CATEGORY = 3
 
     private val mutex = Mutex()
     private var cached: Result? = null
@@ -38,25 +47,54 @@ object Recommendations {
 
     val current: Result? get() = cached
 
+    fun init(context: Context) = CategoryCache.init(context)
+
+    /** Quick result: ranking plus whatever categories are already known. */
     suspend fun load(force: Boolean = false): Result = mutex.withLock {
         val history = Library.history()
         val historyKey = history.take(MAX_SEEDS).joinToString { it.url }
         val fresh = System.currentTimeMillis() - builtAt < MAX_AGE_MS && historyKey == builtFromHistory
         cached?.takeIf { fresh && !force }?.let { return it }
 
-        val result = build(history)
+        val all = rank(history)
+        val result = group(all)
         cached = result
         builtAt = System.currentTimeMillis()
         builtFromHistory = historyKey
         result
     }
 
-    private class Candidate(val video: VideoItem) {
-        var score = 0.0
-        val categories = mutableMapOf<String, Double>()
+    /** Looks up the category of the top videos that don't have one yet, then regroups. */
+    suspend fun refine(): Result {
+        val base = cached ?: return load()
+        if (!base.categoriesPending) return base
+        val missing = base.all.take(CATEGORIZE_TOP).filter { CategoryCache[it.url] == null }
+        val limit = Semaphore(6)
+        coroutineScope {
+            missing.map { video ->
+                async(Dispatchers.IO) {
+                    limit.withPermit {
+                        runCatching { YouTube.streamInfo(video.url) }.getOrNull()?.let {
+                            CategoryCache[video.url] = it.category.orEmpty()
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+        CategoryCache.save()
+        return mutex.withLock {
+            // Another load may have replaced the list meanwhile; regroup whatever is current.
+            group(cached?.all ?: base.all).copyPending(false).also { cached = it }
+        }
     }
 
-    private suspend fun build(history: List<VideoItem>): Result = coroutineScope {
+    private fun Result.copyPending(pending: Boolean) = Result(all, categories, pending)
+
+    private class Candidate(val video: VideoItem) {
+        var score = 0.0
+    }
+
+    private suspend fun rank(history: List<VideoItem>): List<VideoItem> = coroutineScope {
         // Recent history counts most; a few favourites keep long-term interests alive.
         // Without any history, the newest subscription uploads stand in as seeds.
         val seeds = buildList {
@@ -75,40 +113,39 @@ object Recommendations {
                 limit.withPermit {
                     runCatching {
                         val info = YouTube.streamInfo(seed.url)
-                        Triple(info.category.orEmpty(), weight, YouTube.related(info))
+                        CategoryCache[seed.url] = info.category.orEmpty()
+                        weight to YouTube.related(info)
                     }.getOrNull()
                 }
             }
         }.awaitAll().filterNotNull()
 
         val candidates = linkedMapOf<String, Candidate>()
-        for ((category, weight, related) in pools) {
+        for ((weight, related) in pools) {
             related.forEachIndexed { rank, video ->
                 if (video.url in watched) return@forEachIndexed
                 val c = candidates.getOrPut(video.url) { Candidate(video) }
                 // YouTube lists the closest matches first.
-                val points = weight / (1 + rank * 0.15)
-                c.score += points
-                if (category.isNotBlank()) c.categories.merge(category, points, Double::plus)
+                c.score += weight / (1 + rank * 0.15)
             }
         }
         for (c in candidates.values) {
             if (c.video.uploaderUrl in subscribed) c.score *= 1.3
             else if (c.video.uploaderUrl in knownChannels) c.score *= 1.15
         }
+        spreadChannels(candidates.values.sortedByDescending { it.score }.map { it.video })
+    }
 
-        val ranked = candidates.values.sortedByDescending { it.score }
-        val all = spreadChannels(ranked.map { it.video })
-
-        val categories = ranked
-            .mapNotNull { c -> c.categories.maxByOrNull { it.value }?.key?.let { it to c.video } }
+    private fun group(all: List<VideoItem>): Result {
+        val categories = all
+            .mapNotNull { video -> CategoryCache[video.url]?.takeIf { it.isNotBlank() }?.let { it to video } }
             .groupBy({ it.first }, { it.second })
-            .filterValues { it.size >= 4 }
+            .filterValues { it.size >= MIN_PER_CATEGORY }
             .entries
             .sortedByDescending { it.value.size }
-            .map { (key, videos) -> Category(key, categoryTitle(key), spreadChannels(videos)) }
-
-        Result(all, categories)
+            .map { (key, videos) -> Category(key, categoryTitle(key), videos) }
+        val pending = all.take(CATEGORIZE_TOP).any { CategoryCache[it.url] == null }
+        return Result(all, categories, pending)
     }
 
     /** Avoids long runs of the same channel, like YouTube's home page does. */
@@ -142,5 +179,33 @@ object Recommendations {
         "Science & Technology" -> "Vetenskap och teknik"
         "Nonprofits & Activism" -> "Ideellt och engagemang"
         else -> key
+    }
+
+    /** Video URL to YouTube category, kept between app starts. */
+    private object CategoryCache {
+        private const val MAX_ENTRIES = 3000
+        private lateinit var prefs: SharedPreferences
+        private val map = LinkedHashMap<String, String>()
+
+        fun init(context: Context) {
+            prefs = context.getSharedPreferences("categories", Context.MODE_PRIVATE)
+            val json = JSONObject(prefs.getString("map", "{}")!!)
+            json.keys().forEach { map[it] = json.getString(it) }
+        }
+
+        @Synchronized
+        operator fun get(url: String): String? = map[url]
+
+        @Synchronized
+        operator fun set(url: String, category: String) {
+            map.remove(url)
+            map[url] = category
+            while (map.size > MAX_ENTRIES) map.remove(map.keys.first())
+        }
+
+        @Synchronized
+        fun save() {
+            prefs.edit().putString("map", JSONObject(map as Map<*, *>).toString()).apply()
+        }
     }
 }

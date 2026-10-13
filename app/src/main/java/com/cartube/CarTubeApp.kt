@@ -2,6 +2,7 @@ package com.cartube
 
 import android.app.Application
 import com.cartube.data.Library
+import com.cartube.data.Recommendations
 import com.cartube.data.Settings
 import com.google.android.material.color.DynamicColors
 import com.cartube.data.Sync
@@ -18,6 +19,7 @@ class CarTubeApp : Application() {
         Settings.init(this)
         if (Settings.dynamicColor) DynamicColors.applyToActivitiesIfAvailable(this)
         Library.init(this)
+        Recommendations.init(this)
         Sync.init(this)
 
         val locale = Locale.getDefault()

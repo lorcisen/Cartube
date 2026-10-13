@@ -57,6 +57,10 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
                     current.empty.isVisible = adapter.itemCount == 0
                     current.emptyText.text = getString(R.string.recommendations_failed, it.message ?: it.javaClass.simpleName)
                 }
+            // Categories of new videos are looked up afterwards, so the list shows at once.
+            if (result.getOrNull()?.categoriesPending == true) {
+                runCatching { Recommendations.refine() }.onSuccess { show(it) }
+            }
         }
     }
 
