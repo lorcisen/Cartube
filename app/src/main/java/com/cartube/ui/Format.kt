@@ -19,10 +19,13 @@ fun formatCount(count: Long): String =
     CompactDecimalFormat.getInstance(Locale.getDefault(), CompactDecimalFormat.CompactStyle.SHORT)
         .format(count)
 
-fun formatAge(millis: Long): String =
-    DateUtils.getRelativeTimeSpanString(
-        millis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS,
-    ).toString()
+fun formatAge(millis: Long): String {
+    val now = System.currentTimeMillis()
+    if (now - millis in 0 until DateUtils.MINUTE_IN_MILLIS) return "just nu"
+    return DateUtils.getRelativeTimeSpanString(millis, now, DateUtils.MINUTE_IN_MILLIS)
+        .toString()
+        .replaceFirstChar { it.lowercase() }
+}
 
 /** "Channel · 12K visningar · 3 dagar sedan", leaving out what is unknown. */
 fun Context.videoMeta(item: VideoItem, includeUploader: Boolean = true): String = listOfNotNull(

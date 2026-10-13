@@ -6,6 +6,20 @@
         <item name="colorPrimaryContainer">#FFDAD6</item>
         <item name="colorOnPrimaryContainer">#410002</item>
         <item name="colorSecondary">@color/brand_dark</item>
+        <!-- Neutral greys instead of Material's default lilac, like YouTube. -->
+        <item name="colorSecondaryContainer">#E5E5E5</item>
+        <item name="colorOnSecondaryContainer">#0F0F0F</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorSurfaceContainerLowest">#FFFFFF</item>
+        <item name="colorSurfaceContainerLow">#F9F9F9</item>
+        <item name="colorSurfaceContainer">#F2F2F2</item>
+        <item name="colorSurfaceContainerHigh">#ECECEC</item>
+        <item name="colorSurfaceContainerHighest">#E5E5E5</item>
+        <item name="colorOnSurface">#0F0F0F</item>
+        <item name="colorOnSurfaceVariant">#606060</item>
+        <item name="colorOutline">#CCCCCC</item>
+        <item name="colorOutlineVariant">#E5E5E5</item>
     </style>
 
     <style name="Theme.CarTube.Player">

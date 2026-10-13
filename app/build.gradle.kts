@@ -11,8 +11,8 @@ android {
         applicationId = "com.cartube"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "2.0"
+        versionCode = 6
+        versionName = "2.0.1"
     }
 
     buildFeatures {

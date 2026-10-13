@@ -123,6 +123,9 @@ object Sync {
                     val fileId = drive.findFile()
                     fileId?.let { drive.download(it) }?.let { Library.merge(JSONObject(it)) }
                     drive.upload(fileId, Library.export().toString())
+                    if (prefs.getString("email", null) == null) {
+                        drive.email()?.let { prefs.edit().putString("email", it).apply() }
+                    }
                 }
                 prefs.edit().putLong("last_sync", System.currentTimeMillis()).apply()
                 null
@@ -166,6 +169,12 @@ object Sync {
             return JSONObject(body).optJSONArray("files")?.optJSONObject(0)?.optString("id")
                 ?.takeIf { it.isNotBlank() }
         }
+
+        /** The signed-in account's address, for showing who is syncing. */
+        fun email(): String? = runCatching {
+            val body = call(Request.Builder().url("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)").get())
+            JSONObject(body).optJSONObject("user")?.optString("emailAddress")?.takeIf { it.isNotBlank() }
+        }.getOrNull()
 
         fun download(id: String): String = call(Request.Builder().url("$api/$id?alt=media").get())
 
