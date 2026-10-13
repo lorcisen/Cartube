@@ -122,6 +122,13 @@
     <string name="pref_amoled_summary">Helt svart bakgrund i mörkt läge, sparar batteri</string>
     <string name="pref_dynamic_color">Material You-färger</string>
     <string name="pref_dynamic_color_summary">Använd färgerna från din bakgrundsbild (startar om appen)</string>
+    <string name="update_title">Ny version av CarTube</string>
+    <string name="update_message">Version %1$s finns att installera.</string>
+    <string name="update_install">Uppdatera</string>
+    <string name="update_later">Senare</string>
+    <string name="update_downloading">Laddar ner uppdateringen… Installationen startar när den är klar.</string>
+    <string name="update_none">Du har den senaste versionen.</string>
+    <string name="update_check">Sök efter uppdatering</string>
     <string name="pref_about">Om</string>
     <string name="pref_version">Version</string>
 </resources>

@@ -81,6 +81,35 @@ class PlaybackService : MediaLibraryService() {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) playNextRelated()
         }
+
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            retryAfterError()
+        }
+    }
+
+    /**
+     * Retries a failed video once with freshly fetched stream URLs and without subtitles,
+     * from where it stopped. Stream URLs expire and caption requests can be refused, and
+     * either is reported as a generic source error.
+     */
+    private fun retryAfterError() {
+        val player = session?.player ?: return
+        if (player !== exoPlayer) return
+        val item = player.currentMediaItem ?: return
+        val url = item.mediaId
+        if (!PlaybackRecovery.markRetry(url)) return
+        val position = player.currentPosition
+        scope.launch {
+            runCatching { YouTube.streamInfo(url, fresh = true) }.getOrNull() ?: return@launch
+            if (exoPlayer.currentMediaItem?.mediaId != url) return@launch
+            // Insert-and-remove (not replace) so ExoPlayer builds a new source from the fresh info.
+            val index = exoPlayer.currentMediaItemIndex
+            exoPlayer.addMediaItem(index + 1, item)
+            exoPlayer.removeMediaItem(index)
+            exoPlayer.seekTo(index, position)
+            exoPlayer.prepare()
+            exoPlayer.play()
+        }
     }
 
     override fun onCreate() {

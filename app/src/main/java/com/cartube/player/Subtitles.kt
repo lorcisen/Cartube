@@ -32,8 +32,10 @@ object Subtitles {
     private const val TARGET = "sv"
     private val swedish = Locale("sv")
     private val parserFactory = DefaultSubtitleParserFactory()
+    private val EMPTY_VTT = "WEBVTT\n\n".toByteArray()
 
     fun sources(info: StreamInfo, data: DataSource.Factory): List<MediaSource> {
+        if (PlaybackRecovery.isRetrying(info.url)) return emptyList()
         val tracks = info.subtitles.filter { it.isUrl && it.content.isNotBlank() }
         if (tracks.isEmpty()) return emptyList()
         val mode = Settings.subtitles
@@ -104,7 +106,7 @@ object Subtitles {
         // Parse while loading, the way ExoPlayer itself handles side-loaded subtitles.
         val parser = CenteredParser(parserFactory.create(format))
         val extractors = ExtractorsFactory { arrayOf(SubtitleExtractor(parser, format)) }
-        return ProgressiveMediaSource.Factory(data, extractors)
+        return ProgressiveMediaSource.Factory(FailSafeDataSource.Factory(data, EMPTY_VTT), extractors)
             .createMediaSource(MediaItem.fromUri(vttUrl))
     }
 
@@ -120,8 +122,11 @@ object Subtitles {
             outputOptions: SubtitleParser.OutputOptions,
             output: Consumer<CuesWithTiming>,
         ) {
-            delegate.parse(data, offset, length, outputOptions) { cues ->
-                output.accept(CuesWithTiming(cues.cues.map(::center), cues.startTimeUs, cues.durationUs))
+            // A malformed caption file should mean no captions, not a failed video.
+            runCatching {
+                delegate.parse(data, offset, length, outputOptions) { cues ->
+                    output.accept(CuesWithTiming(cues.cues.map(::center), cues.startTimeUs, cues.durationUs))
+                }
             }
         }
 

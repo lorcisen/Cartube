@@ -94,6 +94,9 @@
 
     <PreferenceCategory app:title="@string/pref_about">
         <Preference
+            app:key="check_update"
+            app:title="@string/update_check" />
+        <Preference
             app:key="version"
             app:selectable="false"
             app:title="@string/pref_version" />

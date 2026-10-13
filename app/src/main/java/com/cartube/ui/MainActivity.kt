@@ -18,6 +18,7 @@ import com.cartube.R
 import com.cartube.data.Library
 import com.cartube.data.Settings
 import com.cartube.data.Sync
+import com.cartube.data.Updates
 import android.content.ComponentName
 import androidx.core.view.isVisible
 import androidx.media3.common.Player
@@ -84,6 +85,7 @@ class MainActivity : AppCompatActivity() {
 
         askForNotificationPermission()
         if (savedInstanceState == null) handleShare(intent)
+        lifecycleScope.launch { Updates.check(this@MainActivity)?.let { offerUpdate(it) } }
     }
 
     override fun onStart() {
@@ -260,6 +262,22 @@ class MainActivity : AppCompatActivity() {
                 else -> "csv"
             }
         }
+    }
+
+    fun offerUpdate(update: Updates.Update) {
+        val message = buildString {
+            append(getString(R.string.update_message, update.versionName))
+            if (update.notes.isNotBlank()) append("\n\n").append(update.notes)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.update_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.update_install) { _, _ ->
+                Updates.downloadAndInstall(this, update)
+                Toast.makeText(this, R.string.update_downloading, Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton(R.string.update_later, null)
+            .show()
     }
 
     private fun handleShare(intent: Intent?) {

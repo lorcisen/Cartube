@@ -68,9 +68,14 @@ jobs:
         if: env.HAS_SIGNING_KEY == 'true' && github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         env:
           GH_TOKEN: ${{ github.token }}
+        # The app's update check reads versionCode/versionName from these notes.
         run: |
+          code=$(grep -oP 'versionCode = \K\d+' app/build.gradle.kts)
+          name=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          message=$(git log -1 --format=%s)
+          printf 'versionCode=%s\nversionName=%s\n\n%s\n' "$code" "$name" "$message" > notes.txt
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest CarTube.apk \
-            --title "CarTube (senaste bygget)" \
-            --notes "Byggd från ${GITHUB_SHA::7}. Ladda ner CarTube.apk på telefonen och installera." \
+            --title "CarTube $name" \
+            --notes-file notes.txt \
             --target "$GITHUB_SHA"
