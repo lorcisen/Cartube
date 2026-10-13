@@ -59,6 +59,7 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.stream.Description
 
 class PlayerActivity : AppCompatActivity() {
@@ -271,7 +272,19 @@ class PlayerActivity : AppCompatActivity() {
 
         detailsJob?.cancel()
         detailsJob = lifecycleScope.launch {
-            val info = runCatching { YouTube.streamInfo(item.url) }.getOrNull() ?: return@launch
+            val result = runCatching { YouTube.streamInfo(item.url) }
+            val failure = result.exceptionOrNull()
+            if (failure is ContentNotAvailableException && shown?.url == item.url) {
+                // Members-only, private, removed…: say why instead of a spinner that never ends.
+                binding.loading.isVisible = false
+                val message = describeError(failure)
+                Toast.makeText(
+                    this@PlayerActivity,
+                    if (failure.javaClass == ContentNotAvailableException::class.java) getString(R.string.error_unavailable, message) else message,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            val info = result.getOrNull() ?: return@launch
             if (shown?.url != item.url && shown?.url != info.url) return@launch
             shown = info.toVideoItem()
             subscribers = info.uploaderSubscriberCount

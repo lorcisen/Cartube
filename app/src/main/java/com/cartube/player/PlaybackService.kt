@@ -570,6 +570,11 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<MediaItemsWithStartPosition> = scope.future {
             val resolved = mediaItems.mapNotNull { resolve(it) }
             if (resolved.isEmpty() && mediaItems.isNotEmpty()) {
+                // Don't leave the previous video playing as if it were the one asked for.
+                session?.player?.run {
+                    stop()
+                    clearMediaItems()
+                }
                 throw IllegalStateException("None of the requested videos could be loaded")
             }
             val index = if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, maxOf(resolved.size - 1, 0))
