@@ -109,6 +109,13 @@ class PlaybackService : MediaLibraryService() {
     private val sleep = Runnable { session?.player?.pause() }
     private var autoplayJob: kotlinx.coroutines.Job? = null
 
+    /**
+     * Set when a requested video could not be loaded. The play() that follows the request
+     * then finds an empty player, which Media3 treats as "resume the last video"; that must
+     * not start whatever was watched before.
+     */
+    private var refuseResumptionUntil = 0L
+
     private val playerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
@@ -575,6 +582,7 @@ class PlaybackService : MediaLibraryService() {
                     stop()
                     clearMediaItems()
                 }
+                refuseResumptionUntil = android.os.SystemClock.elapsedRealtime() + 10_000
                 throw IllegalStateException("None of the requested videos could be loaded")
             }
             val index = if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, maxOf(resolved.size - 1, 0))
@@ -591,6 +599,9 @@ class PlaybackService : MediaLibraryService() {
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): ListenableFuture<MediaItemsWithStartPosition> = scope.future {
+            if (android.os.SystemClock.elapsedRealtime() < refuseResumptionUntil) {
+                throw UnsupportedOperationException("The requested video could not be played")
+            }
             val last = Library.history().firstOrNull()
                 ?: throw UnsupportedOperationException("Nothing to resume")
             val item = resolve(last.toMediaItem())
