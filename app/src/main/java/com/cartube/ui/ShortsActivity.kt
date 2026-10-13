@@ -60,12 +60,19 @@ class ShortsActivity : AppCompatActivity() {
                 true,
             )
             .build()
-            .apply { repeatMode = Player.REPEAT_MODE_ONE }
+            .apply {
+                repeatMode = Player.REPEAT_MODE_ONE
+                // Shorts are watched without subtitles.
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    .build()
+            }
         playerView = PlayerView(this).apply {
             useController = false
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             player = this@ShortsActivity.player
             setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            subtitleView?.visibility = android.view.View.GONE
         }
 
         binding.back.setOnClickListener { finish() }

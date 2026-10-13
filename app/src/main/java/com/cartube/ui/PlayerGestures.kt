@@ -31,6 +31,39 @@ class PlayerGestures(
     private val handler = Handler(Looper.getMainLooper())
     private val hideIndicator = Runnable { indicator.isVisible = false }
     private var volume = -1f
+    private var scaling = false
+
+    /** Pinch out to fill the screen (cropping the edges), pinch in to see the whole picture. */
+    private val scaleDetector = android.view.ScaleGestureDetector(
+        activity,
+        object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var total = 1f
+
+            override fun onScaleBegin(detector: android.view.ScaleGestureDetector): Boolean {
+                total = 1f
+                scaling = true
+                return true
+            }
+
+            override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
+                total *= detector.scaleFactor
+                return true
+            }
+
+            override fun onScaleEnd(detector: android.view.ScaleGestureDetector) {
+                val zoom = total > 1.08f
+                val fit = total < 0.92f
+                if (zoom || fit) {
+                    playerView.resizeMode = if (zoom) {
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    } else {
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                    show(activity.getString(if (zoom) R.string.gesture_zoom else R.string.gesture_fit))
+                }
+            }
+        },
+    )
 
     private val detector = GestureDetector(activity, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
@@ -63,6 +96,16 @@ class PlayerGestures(
     fun attach() {
         playerView.setOnTouchListener { _, event ->
             if (!Settings.gestures) return@setOnTouchListener false
+            scaleDetector.onTouchEvent(event)
+            // While two fingers are down, don't also treat the movement as a swipe or tap.
+            if (event.pointerCount > 1 || scaleDetector.isInProgress) {
+                if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) scaling = false
+                return@setOnTouchListener true
+            }
+            if (scaling) {
+                if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) scaling = false
+                return@setOnTouchListener true
+            }
             detector.onTouchEvent(event)
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                 volume = -1f

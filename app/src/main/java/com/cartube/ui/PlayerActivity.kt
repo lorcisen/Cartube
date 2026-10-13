@@ -137,7 +137,22 @@ class PlayerActivity : AppCompatActivity() {
         applyAmoledIfEnabled()
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.root.padForSystemBars()
+        // Normally keep clear of the system bars and the camera cutout; in fullscreen use
+        // every pixel, edge to edge.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            if (fullscreenNow) {
+                v.setPadding(0, 0, 0, 0)
+            } else {
+                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+                v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            }
+            insets
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
         onBackPressedDispatcher.addCallback(this, exitFullscreenOnBack)
 
         binding.details.adapter = ConcatAdapter(header, related)
@@ -378,6 +393,7 @@ class PlayerActivity : AppCompatActivity() {
 
     /** On tablets fullscreen is a choice, not a rotation, since landscape shows details beside the video. */
     private var tabletFullscreen = false
+    private var fullscreenNow = false
 
     private fun setFullscreen(fullscreen: Boolean) {
         if (isTablet) {
@@ -404,6 +420,13 @@ class PlayerActivity : AppCompatActivity() {
         val landscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE
         val fullscreen = if (isTablet) tabletFullscreen else landscape
         val sideBySide = isTablet && landscape && !fullscreen
+        fullscreenNow = fullscreen
+        androidx.core.view.ViewCompat.requestApplyInsets(binding.root)
+        binding.playerView.layoutParams = binding.playerView.layoutParams.apply {
+            height = if (fullscreen || sideBySide) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
+        }
+        // Leaving fullscreen goes back to showing the whole picture.
+        if (!fullscreen) binding.playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
 
         binding.root.orientation = if (sideBySide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         binding.playerContainer.layoutParams = (binding.playerContainer.layoutParams as LinearLayout.LayoutParams).apply {

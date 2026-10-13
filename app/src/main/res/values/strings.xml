@@ -291,4 +291,6 @@
     <string name="short_failed">Kunde inte spela den här Shorten</string>
     <string name="error_rate_limited">YouTube har tillfälligt begränsat antalet förfrågningar från din uppkoppling. Vänta en stund och försök igen – oftast några minuter.</string>
     <string name="error_offline">Ingen internetanslutning.</string>
+    <string name="gesture_zoom">Fyll skärmen</string>
+    <string name="gesture_fit">Hela bilden</string>
 </resources>
