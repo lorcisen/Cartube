@@ -58,7 +58,7 @@ object CommentsSheet {
                     next = page.next
                 }.onFailure {
                     binding.message.isVisible = adapter.itemCount == 0
-                    binding.message.text = activity.getString(R.string.comments_failed, describeError(it))
+                    binding.message.text = activity.getString(R.string.comments_failed, activity.describeError(it))
                 }
             }
         }
