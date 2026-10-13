@@ -20,6 +20,8 @@ import com.cartube.data.Settings
 import com.cartube.data.Sync
 import com.cartube.data.Updates
 import android.content.ComponentName
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -58,6 +60,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.padForSystemBars()
+        // The root already keeps clear of the system bars and keyboard; without this the
+        // navigation bar adds the same space again and grows to the keyboard's height.
+        ViewCompat.setOnApplyWindowInsetsListener(nav) { v, insets ->
+            v.setPadding(0, 0, 0, 0)
+            insets
+        }
+        // While typing, give the screen to the search box and its suggestions.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.content) { _, insets ->
+            val typing = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (!isTablet) nav.isVisible = !typing
+            miniPlayerHiddenForKeyboard = typing
+            updateMiniPlayer()
+            insets
+        }
 
         binding.toolbar.inflateMenu(R.menu.main)
         runCatching {
@@ -111,6 +127,7 @@ class MainActivity : AppCompatActivity() {
     // region Mini player
 
     private var createdWithAmoled = false
+    private var miniPlayerHiddenForKeyboard = false
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
     private val progressTick = object : Runnable {
@@ -168,7 +185,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateMiniPlayer() {
         val c = controller
         val item = c?.currentMediaItem
-        if (c == null || item == null || c.playbackState == Player.STATE_IDLE) {
+        if (c == null || item == null || c.playbackState == Player.STATE_IDLE || miniPlayerHiddenForKeyboard) {
             binding.miniPlayer.isVisible = false
             return
         }
