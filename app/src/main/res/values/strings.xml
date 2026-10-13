@@ -23,6 +23,8 @@
     <string name="home_empty_title">Dina prenumerationer</string>
     <string name="home_empty_body">Importera kanalerna du följer på YouTube, eller sök upp kanaler och tryck Prenumerera. De senaste videorna visas sedan här.</string>
     <string name="find_channels">Hitta kanaler</string>
+    <string name="feed_empty">Hittade inga videor från dina kanaler. Dra nedåt för att försöka igen.</string>
+    <string name="feed_partly_failed">Kunde inte hämta videor från %1$d kanaler. Dra nedåt för att försöka igen.</string>
     <string name="feed_failed">Kunde inte hämta flödet: %1$s</string>
 
     <string name="import_title">Importera från YouTube</string>

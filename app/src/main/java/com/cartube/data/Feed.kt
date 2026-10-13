@@ -11,6 +11,7 @@ object Feed {
 
     private val mutex = Mutex()
     private var items: List<VideoItem> = emptyList()
+    private var lastResult: YouTube.FeedResult? = null
     private var fetchedAt = 0L
 
     val cached: List<VideoItem> get() = items
@@ -19,12 +20,16 @@ object Feed {
         fetchedAt = 0
     }
 
-    suspend fun load(force: Boolean = false): List<VideoItem> = mutex.withLock {
+    suspend fun load(force: Boolean = false): YouTube.FeedResult = mutex.withLock {
         val stale = System.currentTimeMillis() - fetchedAt > MAX_AGE_MS
-        if (force || stale || items.isEmpty()) {
-            items = YouTube.feed(Library.subscriptions())
-            fetchedAt = System.currentTimeMillis()
-        }
-        items
+        val previous = lastResult
+        if (!force && !stale && previous != null && items.isNotEmpty()) return previous
+
+        val result = YouTube.feed(Library.subscriptions())
+        lastResult = result
+        items = result.videos
+        // Only keep a result that found something; otherwise retry next time.
+        fetchedAt = if (result.videos.isNotEmpty()) System.currentTimeMillis() else 0
+        result
     }
 }

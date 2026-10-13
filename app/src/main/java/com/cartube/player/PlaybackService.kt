@@ -214,7 +214,7 @@ class PlaybackService : MediaLibraryService() {
                     folder(FAVORITES, getString(R.string.tab_favorites)),
                     folder(HISTORY, getString(R.string.tab_history)),
                 )
-                FEED -> runCatching { Feed.load() }.getOrDefault(Feed.cached).map { it.toMediaItem() }
+                FEED -> runCatching { Feed.load().videos }.getOrDefault(Feed.cached).map { it.toMediaItem() }
                 FAVORITES -> Library.favorites().map { it.toMediaItem() }
                 HISTORY -> Library.history().map { it.toMediaItem() }
                 else -> return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)

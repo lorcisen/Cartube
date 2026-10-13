@@ -61,40 +61,71 @@ object YouTube {
         val videos: List<VideoItem>,
     )
 
-    suspend fun channel(url: String): ChannelPage = withContext(Dispatchers.IO) {
+    class FeedResult(
+        val videos: List<VideoItem>,
+        /** Channels whose videos could not be loaded at all. */
+        val failed: Int,
+        val firstError: Throwable?,
+    )
+
+    /**
+     * Latest uploads from the given channels, newest first. Tries each channel's RSS feed
+     * first, which is quick, and falls back to the channel's video tab when YouTube
+     * refuses the feed or it comes back empty.
+     */
+    suspend fun feed(channels: List<Channel>): FeedResult = coroutineScope {
+        val limit = Semaphore(6)
+        val results = channels.map { channel ->
+            async(Dispatchers.IO) {
+                limit.withPermit {
+                    runCatching { channelUploads(channel) }
+                }
+            }
+        }.awaitAll()
+
+        val videos = results.mapNotNull { it.getOrNull() }
+            .flatten()
+            .distinctBy { it.url }
+            .sortedByDescending { it.uploadedAt }
+            .take(300)
+        FeedResult(
+            videos = videos,
+            failed = results.count { it.isFailure },
+            firstError = results.firstNotNullOfOrNull { it.exceptionOrNull() },
+        )
+    }
+
+    private fun channelUploads(channel: Channel): List<VideoItem> {
+        val fromRss = runCatching {
+            FeedInfo.getInfo(service, channel.url).relatedItems
+                .filterIsInstance<StreamInfoItem>()
+                .filterNot { it.isShortFormContent }
+                .map { it.toVideoItem().copy(uploaderAvatar = channel.avatar) }
+        }.getOrNull()
+        if (!fromRss.isNullOrEmpty()) return fromRss
+
+        val page = channelBlocking(channel.url)
+        return page.videos
+    }
+
+    suspend fun channel(url: String): ChannelPage = withContext(Dispatchers.IO) { channelBlocking(url) }
+
+    private fun channelBlocking(url: String): ChannelPage {
         val info = ChannelInfo.getInfo(service, url)
         val channel = Channel(info.url, info.name, VideoItem.bestImage(info.avatars, 240))
         val videosTab = info.tabs.firstOrNull { ChannelTabs.VIDEOS in it.contentFilters }
         val videos = videosTab?.let { tab ->
             ChannelTabInfo.getInfo(service, tab).relatedItems
                 .filterIsInstance<StreamInfoItem>()
-                .map { it.toVideoItem().copy(uploaderAvatar = channel.avatar) }
-        }.orEmpty()
-        ChannelPage(channel, info.subscriberCount, VideoItem.bestImage(info.banners, 1280), videos)
-    }
-
-    /**
-     * Latest uploads from the given channels, newest first. Uses each channel's RSS feed,
-     * which is quick and does not need an account.
-     */
-    suspend fun feed(channels: List<Channel>): List<VideoItem> = coroutineScope {
-        val limit = Semaphore(8)
-        channels.map { channel ->
-            async(Dispatchers.IO) {
-                limit.withPermit {
-                    runCatching {
-                        FeedInfo.getInfo(service, channel.url).relatedItems
-                            .filterIsInstance<StreamInfoItem>()
-                            .filterNot { it.isShortFormContent }
-                            .map { it.toVideoItem().copy(uploaderAvatar = channel.avatar) }
-                    }.getOrDefault(emptyList())
+                .map {
+                    it.toVideoItem().copy(
+                        uploader = it.uploaderName?.takeIf { name -> name.isNotBlank() } ?: channel.name,
+                        uploaderUrl = it.uploaderUrl ?: channel.url,
+                        uploaderAvatar = channel.avatar,
+                    )
                 }
-            }
-        }.awaitAll()
-            .flatten()
-            .distinctBy { it.url }
-            .sortedByDescending { it.uploadedAt }
-            .take(300)
+        }.orEmpty()
+        return ChannelPage(channel, info.subscriberCount, VideoItem.bestImage(info.banners, 1280), videos)
     }
 
     /** Reads a Google Takeout export (zip, csv or json) of YouTube subscriptions. */

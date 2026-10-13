@@ -44,6 +44,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         super.onDestroyView()
     }
 
+    private fun describe(error: Throwable?): String =
+        error?.message?.takeIf { it.isNotBlank() } ?: error?.javaClass?.simpleName ?: "?"
+
     private fun load(force: Boolean) {
         val b = binding ?: return
         val hasSubscriptions = Library.subscriptions().isNotEmpty()
@@ -60,11 +63,21 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val result = runCatching { Feed.load(force) }
             val current = binding ?: return@launch
             current.refresh.isRefreshing = false
-            result.onSuccess { adapter.submitList(it) }
-                .onFailure {
-                    current.error.isVisible = true
-                    current.error.text = getString(R.string.feed_failed, it.message ?: it.javaClass.simpleName)
+            result.onSuccess { feed ->
+                adapter.submitList(feed.videos)
+                val message = when {
+                    feed.videos.isEmpty() && feed.failed > 0 ->
+                        getString(R.string.feed_failed, describe(feed.firstError))
+                    feed.videos.isEmpty() -> getString(R.string.feed_empty)
+                    feed.failed > 0 -> getString(R.string.feed_partly_failed, feed.failed)
+                    else -> null
                 }
+                current.error.isVisible = message != null
+                current.error.text = message
+            }.onFailure {
+                current.error.isVisible = true
+                current.error.text = getString(R.string.feed_failed, describe(it))
+            }
         }
     }
 }
