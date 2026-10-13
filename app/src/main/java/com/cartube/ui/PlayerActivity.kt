@@ -90,7 +90,11 @@ class PlayerActivity : AppCompatActivity() {
             mediaItem?.let { showFromPlayer(it) }
         }
 
-        override fun onIsPlayingChanged(isPlaying: Boolean) = updatePipParams()
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            // Keep the screen on while a video plays; let it sleep when paused.
+            binding.playerView.keepScreenOn = isPlaying
+            updatePipParams()
+        }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             binding.loading.isVisible = playbackState == Player.STATE_BUFFERING
@@ -188,6 +192,7 @@ class PlayerActivity : AppCompatActivity() {
             controller = ready
             binding.playerView.player = ready
             ready.addListener(listener)
+            binding.playerView.keepScreenOn = ready.isPlaying
             val pending = pendingItem
             pendingItem = null
             if (pending != null) play(ready, pending) else ready.currentMediaItem?.let { showFromPlayer(it) }

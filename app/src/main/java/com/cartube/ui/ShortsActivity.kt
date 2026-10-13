@@ -73,6 +73,7 @@ class ShortsActivity : AppCompatActivity() {
             player = this@ShortsActivity.player
             setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
             subtitleView?.visibility = android.view.View.GONE
+            keepScreenOn = true
         }
 
         binding.back.setOnClickListener { finish() }
