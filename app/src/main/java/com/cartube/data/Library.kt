@@ -25,6 +25,10 @@ object Library {
     private const val BLOCKED = "blocked_channels"
     private const val REMOVED_BLOCKED = "removed_blocked_channels"
     private const val NOT_INTERESTED = "not_interested"
+    const val WATCH_LATER = "watch_later"
+    const val LISTEN_LATER = "listen_later"
+    private const val REMOVED_WATCH_LATER = "removed_watch_later"
+    private const val REMOVED_LISTEN_LATER = "removed_listen_later"
     private const val REMOVED_NOT_INTERESTED = "removed_not_interested"
     private const val MAX_HISTORY = 100
     private const val MAX_TOMBSTONES = 500
@@ -128,6 +132,40 @@ object Library {
             current.map { if (it === existing) channel.toJson().put("t", existing.optLong("t")) else it },
         )
     }
+
+    // region Watch later / listen later
+
+    private fun removedKey(list: String) = if (list == WATCH_LATER) REMOVED_WATCH_LATER else REMOVED_LISTEN_LATER
+
+    /** [WATCH_LATER] or [LISTEN_LATER], oldest first so they play in the order saved. */
+    @Synchronized
+    fun later(list: String): List<VideoItem> = readArray(list).map(VideoItem::fromJson).reversed()
+
+    @Synchronized
+    fun isLater(list: String, url: String) = readArray(list).any { it.getString("url") == url }
+
+    /** Returns true if the video is in the list after the call. */
+    fun toggleLater(list: String, item: VideoItem): Boolean {
+        val added = synchronized(this) { toggle(list, removedKey(list), item.url, item.toJson()) }
+        notifyChanged()
+        return added
+    }
+
+    /** Called when a video has been watched to the end. */
+    fun finished(url: String) {
+        var changed = false
+        synchronized(this) {
+            for (list in listOf(WATCH_LATER, LISTEN_LATER)) {
+                if (readArray(list).any { it.getString("url") == url }) {
+                    toggle(list, removedKey(list), url, JSONObject())
+                    changed = true
+                }
+            }
+        }
+        if (changed) notifyChanged()
+    }
+
+    // endregion
 
     // region Playlists
 
@@ -263,6 +301,10 @@ object Library {
         .put(BLOCKED, JSONArray(readArray(BLOCKED)))
         .put(REMOVED_BLOCKED, readTombstones(REMOVED_BLOCKED))
         .put(NOT_INTERESTED, JSONArray(readArray(NOT_INTERESTED)))
+        .put(WATCH_LATER, JSONArray(readArray(WATCH_LATER)))
+        .put(REMOVED_WATCH_LATER, readTombstones(REMOVED_WATCH_LATER))
+        .put(LISTEN_LATER, JSONArray(readArray(LISTEN_LATER)))
+        .put(REMOVED_LISTEN_LATER, readTombstones(REMOVED_LISTEN_LATER))
         .put(REMOVED_NOT_INTERESTED, readTombstones(REMOVED_NOT_INTERESTED))
 
     /** Merges another device's [export] into this one. The newest change to each entry wins. */
@@ -285,6 +327,8 @@ object Library {
             mergeSet(PLAYLISTS, REMOVED_PLAYLISTS, remote)
             mergeSet(BLOCKED, REMOVED_BLOCKED, remote)
             mergeSet(NOT_INTERESTED, REMOVED_NOT_INTERESTED, remote)
+            mergeSet(WATCH_LATER, REMOVED_WATCH_LATER, remote)
+            mergeSet(LISTEN_LATER, REMOVED_LISTEN_LATER, remote)
 
             readArray(SUBSCRIPTIONS).map { it.getString("url") }.toSet() != before
         }

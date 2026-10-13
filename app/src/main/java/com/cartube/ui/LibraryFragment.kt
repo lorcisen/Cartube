@@ -48,6 +48,15 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val b = FragmentLibraryBinding.bind(view)
         binding = b
         b.filter.setOnCheckedStateChangeListener { _, _ -> refresh() }
+        b.statsButton.setOnClickListener { startActivity(android.content.Intent(requireContext(), StatsActivity::class.java)) }
+        b.playAllButton.setOnClickListener {
+            val list = if (b.chipListenLater.isChecked) Library.LISTEN_LATER else Library.WATCH_LATER
+            val items = sort.apply(Library.later(list))
+            if (items.isNotEmpty()) {
+                com.cartube.player.PlayQueue.replace(items.drop(1))
+                requireContext().openVideo(items.first())
+            }
+        }
         b.sortButton.bindChoice(
             listOf(
                 VideoSort.ORIGINAL, VideoSort.NEWEST, VideoSort.OLDEST, VideoSort.TITLE,
@@ -164,6 +173,10 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val channels = b.chipSubscriptions.isChecked
         val history = b.chipHistory.isChecked
         val playlists = b.chipPlaylists.isChecked
+        val watchLater = b.chipWatchLater.isChecked
+        val listenLater = b.chipListenLater.isChecked
+        b.playAllButton.isVisible = (watchLater || listenLater) &&
+            Library.later(if (listenLater) Library.LISTEN_LATER else Library.WATCH_LATER).isNotEmpty()
         val downloads = b.chipDownloads.isChecked
         b.importButton.isVisible = channels
         b.sortButton.isVisible = !channels && !playlists
@@ -204,7 +217,12 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         } else {
             b.list.adapter = videoAdapter
             b.list.useGrid(minItemWidthDp = 380)
-            val items = if (history) Library.history() else Library.favorites()
+            val items = when {
+                history -> Library.history()
+                watchLater -> Library.later(Library.WATCH_LATER)
+                listenLater -> Library.later(Library.LISTEN_LATER)
+                else -> Library.favorites()
+            }
             videoAdapter.submitList(sort.apply(items))
             items.isEmpty()
         }
@@ -215,6 +233,8 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
                 downloads -> R.string.downloads_empty
                 channels -> R.string.empty_subscriptions
                 history -> R.string.empty_history
+                watchLater -> R.string.empty_watch_later
+                listenLater -> R.string.empty_listen_later
                 else -> R.string.empty_favorites
             },
         )

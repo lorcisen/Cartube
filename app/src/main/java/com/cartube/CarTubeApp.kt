@@ -4,6 +4,9 @@ import android.app.Application
 import com.cartube.data.Downloads
 import com.cartube.data.Feed
 import com.cartube.data.Library
+import com.cartube.data.WatchStats
+import com.cartube.notify.ChannelBells
+import com.cartube.notify.NewVideosWorker
 import com.cartube.data.Positions
 import com.cartube.data.SearchHistory
 import com.cartube.data.Recommendations
@@ -23,6 +26,8 @@ class CarTubeApp : Application() {
         Settings.init(this)
         if (Settings.dynamicColor) DynamicColors.applyToActivitiesIfAvailable(this)
         Library.init(this)
+        WatchStats.init(this)
+        ChannelBells.init(this)
         Feed.init(this)
         Downloads.init(this)
         Positions.init(this)
@@ -36,5 +41,6 @@ class CarTubeApp : Application() {
             Localization.fromLocale(locale),
             ContentCountry(locale.country.ifBlank { "US" }),
         )
+        NewVideosWorker.schedule(this)
     }
 }

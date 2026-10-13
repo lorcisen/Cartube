@@ -13,6 +13,7 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.notify.ChannelBells
 import com.cartube.data.VideoSort
 import com.cartube.databinding.ActivityChannelBinding
 import com.cartube.databinding.ChannelHeaderBinding
@@ -99,6 +100,18 @@ class ChannelActivity : AppCompatActivity() {
                 error(R.drawable.avatar_placeholder)
             }
             bindSubscribeButton(b.subscribe, channel)
+            fun renderBell() {
+                val on = ChannelBells.isOn(channel.url)
+                b.bell.setIconResource(if (on) R.drawable.ic_bell else R.drawable.ic_bell_off)
+                b.bell.isVisible = Library.isSubscribed(channel.url)
+            }
+            renderBell()
+            b.subscribe.addOnCheckedChangeListener { _, _ -> renderBell() }
+            b.bell.setOnClickListener {
+                val on = ChannelBells.toggle(channel.url)
+                renderBell()
+                android.widget.Toast.makeText(this@ChannelActivity, if (on) R.string.bell_on else R.string.bell_off, android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

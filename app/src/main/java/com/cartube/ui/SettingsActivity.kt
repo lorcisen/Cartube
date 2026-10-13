@@ -55,6 +55,14 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences, rootKey)
             findPreference<androidx.preference.Preference>("version")?.summary = BuildConfig.VERSION_NAME
+            findPreference<androidx.preference.Preference>("stats")?.setOnPreferenceClickListener {
+                startActivity(android.content.Intent(requireContext(), StatsActivity::class.java))
+                true
+            }
+            findPreference<androidx.preference.Preference>(Settings.KEY_NOTIFY_NEW)?.setOnPreferenceChangeListener { _, _ ->
+                view?.post { com.cartube.notify.NewVideosWorker.schedule(requireContext()) }
+                true
+            }
             findPreference<androidx.preference.Preference>("blocked")?.setOnPreferenceClickListener {
                 showBlocked()
                 true

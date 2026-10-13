@@ -101,6 +101,14 @@
                 app:icon="@drawable/ic_favorite_border" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/watchLaterButton"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/watch_later"
+                app:icon="@drawable/ic_watch_later" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/downloadButton"
                 style="@style/CarTube.ActionButton"
                 android:layout_width="wrap_content"

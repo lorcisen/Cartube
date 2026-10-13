@@ -25,6 +25,8 @@ object Settings {
     const val KEY_NORMALIZE = "normalize_volume"
     const val KEY_CLEAR_SPEECH = "clear_speech"
     const val KEY_DOWNLOAD_QUALITY = "download_quality"
+    const val KEY_NOTIFY_NEW = "notify_new_videos"
+    const val KEY_DAILY_LIMIT = "daily_limit"
     const val KEY_THEME = "theme"
     const val KEY_AMOLED = "amoled"
     const val KEY_DYNAMIC_COLOR = "dynamic_color"
@@ -78,6 +80,9 @@ object Settings {
 
     fun removeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
         prefs.unregisterOnSharedPreferenceChangeListener(listener)
+
+    val notifyNewVideos: Boolean get() = prefs.getBoolean(KEY_NOTIFY_NEW, true)
+    val dailyLimitMinutes: Int get() = prefs.getString(KEY_DAILY_LIMIT, "0")?.toIntOrNull() ?: 0
 
     val amoled: Boolean get() = prefs.getBoolean(KEY_AMOLED, false)
     val dynamicColor: Boolean get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)

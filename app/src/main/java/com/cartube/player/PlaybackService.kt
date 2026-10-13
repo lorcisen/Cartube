@@ -30,6 +30,8 @@ import com.cartube.data.Library
 import com.cartube.data.Recommendations
 import com.cartube.data.Positions
 import com.cartube.data.Settings
+import com.cartube.data.WatchStats
+import com.cartube.notify.Reminders
 import com.cartube.ui.PlayerActivity
 import com.cartube.youtube.StreamCache
 import com.cartube.youtube.VideoItem
@@ -82,8 +84,22 @@ class PlaybackService : MediaLibraryService() {
     private val savePosition = object : Runnable {
         override fun run() {
             rememberPosition()
+            countWatchTime()
             handler.postDelayed(this, 10_000)
         }
+    }
+
+    private var lastTick = 0L
+
+    /** Adds the time since the last tick to today's watch time while playing. */
+    private fun countWatchTime() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (lastTick > 0) {
+            val channel = session?.player?.currentMediaItem?.mediaMetadata?.artist?.toString()
+            WatchStats.add(now - lastTick, channel)
+            if (WatchStats.shouldRemind(Settings.dailyLimitMinutes)) Reminders.watchTime(this, WatchStats.todayMs())
+        }
+        lastTick = now
     }
 
     private val isCasting get() = castPlayer != null && session?.player === castPlayer
@@ -113,19 +129,29 @@ class PlaybackService : MediaLibraryService() {
             if (old.mediaId != newPosition.mediaItem?.mediaId) {
                 // The player already reports the new video's duration, so use the old one's info.
                 val duration = StreamCache.get(old.mediaId)?.duration?.times(1000) ?: return
-                Positions.save(old.mediaId, oldPosition.positionMs, duration)
+                savePosition(old.mediaId, oldPosition.positionMs, duration)
             }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             handler.removeCallbacks(savePosition)
-            if (isPlaying) handler.postDelayed(savePosition, 10_000) else rememberPosition()
+            if (isPlaying) {
+                lastTick = android.os.SystemClock.elapsedRealtime()
+                handler.postDelayed(savePosition, 10_000)
+            } else {
+                countWatchTime()
+                lastTick = 0
+                rememberPosition()
+            }
         }
 
         override fun onAudioSessionIdChanged(audioSessionId: Int) = audioEffects.apply(audioSessionId)
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) playNextRelated()
+            if (playbackState == Player.STATE_ENDED) {
+                session?.player?.currentMediaItem?.let { Library.finished(it.mediaId) }
+                playNextRelated()
+            }
         }
 
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -249,7 +275,13 @@ class PlaybackService : MediaLibraryService() {
     private fun rememberPosition() {
         val player = session?.player ?: return
         val item = player.currentMediaItem ?: return
-        if (player.duration > 0) Positions.save(item.mediaId, player.currentPosition, player.duration)
+        if (player.duration > 0) savePosition(item.mediaId, player.currentPosition, player.duration)
+    }
+
+    /** Saves the position; a video watched to the end leaves Watch later / Listen later. */
+    private fun savePosition(url: String, position: Long, duration: Long) {
+        Positions.save(url, position, duration)
+        if (duration > 0 && position >= duration - 15_000) Library.finished(url)
     }
 
     /**
@@ -434,14 +466,19 @@ class PlaybackService : MediaLibraryService() {
                     folder(FOR_YOU, getString(R.string.nav_for_you)),
                     folder(CONTINUE, getString(R.string.continue_watching))
                         .takeIf { Positions.unfinished(Library.history()).isNotEmpty() },
+                    folder(LISTEN_LATER, getString(R.string.listen_later))
+                        .takeIf { Library.later(Library.LISTEN_LATER).isNotEmpty() },
                     folder(QUEUE, getString(R.string.queue)).takeIf { PlayQueue.upcoming().isNotEmpty() },
                     folder(FEED, getString(R.string.nav_home)),
                     folder(CHANNELS, getString(R.string.tab_subscriptions)),
                     folder(PLAYLISTS, getString(R.string.playlists)),
                     folder(DOWNLOADS, getString(R.string.downloads)),
                     folder(FAVORITES, getString(R.string.tab_favorites)),
+                    folder(WATCH_LATER, getString(R.string.watch_later)),
                     folder(HISTORY, getString(R.string.tab_history)),
                 )
+                LISTEN_LATER -> Library.later(Library.LISTEN_LATER).map { it.toMediaItem() }
+                WATCH_LATER -> Library.later(Library.WATCH_LATER).map { it.toMediaItem() }
                 CONTINUE -> Positions.unfinished(Library.history()).map { it.toMediaItem() }
                 QUEUE -> PlayQueue.upcoming().map { it.toMediaItem() }
                 CHANNELS -> Library.subscriptions().map { folder(CHANNEL_PREFIX + it.url, it.name, it.avatar) }
@@ -566,6 +603,8 @@ class PlaybackService : MediaLibraryService() {
         private const val FEED = "feed"
         private const val FAVORITES = "favorites"
         private const val CONTINUE = "continue"
+        private const val LISTEN_LATER = "listen_later"
+        private const val WATCH_LATER = "watch_later"
         private const val QUEUE = "queue"
         private const val CHANNELS = "channels"
         private const val PLAYLISTS = "playlists"

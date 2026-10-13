@@ -89,4 +89,18 @@
         <item>0.068</item>
         <item>0.085</item>
     </string-array>
+    <string-array name="daily_limit_labels">
+        <item>Av</item>
+        <item>Efter 30 minuter</item>
+        <item>Efter 1 timme</item>
+        <item>Efter 2 timmar</item>
+        <item>Efter 3 timmar</item>
+    </string-array>
+    <string-array name="daily_limit_values">
+        <item>0</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+        <item>180</item>
+    </string-array>
 </resources>

@@ -485,6 +485,9 @@ class PlayerActivity : AppCompatActivity() {
                 ).show()
             }
             b.share.setOnClickListener { shareVideo(item) }
+            b.watchLaterButton.setOnClickListener {
+                VideoActions.toggleLater(this@PlayerActivity, Library.WATCH_LATER, shown ?: item)
+            }
             b.quality.setOnClickListener { pickQuality() }
             b.audioOnly.isChecked = AppSettings.audioOnly
             b.audioOnly.setOnClickListener {

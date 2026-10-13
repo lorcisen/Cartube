@@ -71,6 +71,20 @@
                 android:text="@string/tab_favorites" />
 
             <com.google.android.material.chip.Chip
+                android:id="@+id/chipWatchLater"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/watch_later" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipListenLater"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/listen_later" />
+
+            <com.google.android.material.chip.Chip
                 android:id="@+id/chipHistory"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
@@ -99,6 +113,25 @@
                 android:text="@string/tab_subscriptions" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/playAllButton"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/play_all"
+        android:visibility="gone"
+        app:icon="@drawable/ic_play" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/statsButton"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:text="@string/stats"
+        app:icon="@drawable/ic_stats" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/sortButton"

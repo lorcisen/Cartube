@@ -69,6 +69,16 @@
             android:theme="@style/Theme.CarTube.Player" />
 
         <activity
+            android:name=".ui.ShortsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.CarTube.Player" />
+
+        <activity
+            android:name=".ui.StatsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.PlaylistActivity"
             android:exported="false" />
 

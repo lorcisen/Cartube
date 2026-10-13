@@ -239,4 +239,54 @@
     <string name="no_results_filter">Inga träffar med de här filtren.</string>
     <string name="random">Slumpa</string>
     <string name="random_nothing">Inga videor att slumpa bland än.</string>
+
+    <!-- Watch later / listen later -->
+    <string name="watch_later">Titta senare</string>
+    <string name="listen_later">Lyssna senare</string>
+    <string name="added_watch_later">Sparad i Titta senare</string>
+    <string name="added_listen_later">Sparad i Lyssna senare</string>
+    <string name="removed_later">Borttagen från listan</string>
+    <string name="empty_watch_later">Inget sparat. Håll fingret på en video och välj Titta senare.</string>
+    <string name="empty_listen_later">Inget sparat. Håll fingret på en video och välj Lyssna senare – listan finns överst i Android Auto.</string>
+
+    <!-- Notifications -->
+    <string name="notify_channel_new">Nya videor</string>
+    <string name="notify_channel_time">Tittartid</string>
+    <string name="notify_new_summary">%1$d nya videor från dina kanaler</string>
+    <string name="notify_time_title">Dags för en paus?</string>
+    <string name="notify_time_text">Du har tittat %1$s idag.</string>
+    <string name="bell_on">Notiser på för den här kanalen</string>
+    <string name="bell_off">Notiser av för den här kanalen</string>
+    <string name="pref_notifications">Notiser</string>
+    <string name="pref_notify_new">Nya videor från prenumerationer</string>
+    <string name="pref_notify_new_summary">Appen kollar några gånger om dagen. Stäng av per kanal med klockan på kanalsidan.</string>
+    <string name="pref_daily_limit">Påminn om tittartid</string>
+
+    <!-- Stats -->
+    <string name="stats">Tittartid</string>
+    <string name="stats_today">Idag</string>
+    <string name="stats_week">Senaste 7 dagarna</string>
+    <string name="stats_average">Snitt per dag</string>
+    <string name="stats_days">Per dag</string>
+    <string name="stats_channels">Mest tittade kanaler</string>
+    <string name="stats_none">Ingen tittartid än.</string>
+
+    <!-- Explore / trending / shorts -->
+    <string name="nav_explore">Utforska</string>
+    <string name="trending">Trendande</string>
+    <string name="country_sweden">Sverige</string>
+    <string name="country_usa">USA</string>
+    <string name="trending_all">Allmänt</string>
+    <string name="trending_music">Musik</string>
+    <string name="trending_gaming">Spel</string>
+    <string name="trending_movies">Filmer och serier</string>
+    <string name="trending_podcasts">Poddar</string>
+    <string name="trending_live">Live</string>
+    <string name="trending_failed">Kunde inte hämta trendande: %1$s</string>
+    <string name="trending_empty">Inget att visa här just nu.</string>
+    <string name="shorts">Shorts</string>
+    <string name="shorts_subtitle">Svep uppåt för nästa</string>
+    <string name="shorts_none">Hittade inga Shorts.</string>
+    <string name="shorts_car">Ansluten till bilen – Shorts visas inte under körning.</string>
+    <string name="short_failed">Kunde inte spela den här Shorten</string>
 </resources>

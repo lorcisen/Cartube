@@ -19,6 +19,8 @@ import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.feed.FeedInfo
+import org.schabi.newpipe.extractor.kiosk.KioskInfo
+import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -117,6 +119,47 @@ object YouTube {
         pinned = isPinned,
         hearted = isHeartedByUploader,
     )
+
+    /**
+     * One of YouTube's trending lists ("Trending", "trending_music", "trending_gaming",
+     * "trending_movies_and_shows", "trending_podcasts_episodes", "live") for a country code.
+     */
+    suspend fun trending(kioskId: String, country: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        val extractor = service.kioskList.getExtractorById(kioskId, null)
+        extractor.forceContentCountry(ContentCountry(country))
+        extractor.fetchPage()
+        KioskInfo.getInfo(extractor).relatedItems
+            .filterIsInstance<StreamInfoItem>()
+            .filterNot { it.isShortFormContent }
+            .map { it.toVideoItem() }
+    }
+
+    /** Shorts from the given channels' Shorts tabs, newest first, mixed between channels. */
+    suspend fun shorts(channels: List<Channel>, perChannel: Int = 8): List<VideoItem> = coroutineScope {
+        val limit = Semaphore(4)
+        channels.shuffled().take(12).map { channel ->
+            async(Dispatchers.IO) {
+                limit.withPermit {
+                    runCatching {
+                        val info = ChannelInfo.getInfo(service, channel.url)
+                        val tab = info.tabs.firstOrNull { ChannelTabs.SHORTS in it.contentFilters } ?: return@runCatching emptyList()
+                        ChannelTabInfo.getInfo(service, tab).relatedItems
+                            .filterIsInstance<StreamInfoItem>()
+                            .take(perChannel)
+                            .map { it.toVideoItem().copy(uploader = it.uploaderName?.ifBlank { null } ?: channel.name, uploaderUrl = channel.url, uploaderAvatar = channel.avatar) }
+                    }.getOrDefault(emptyList())
+                }
+            }
+        }.awaitAll().flatten().shuffled()
+    }
+
+    /** Shorts found by searching, for when there are no subscriptions to draw from. */
+    suspend fun searchShorts(query: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        searchInfo(query, YoutubeSearchQueryHandlerFactory.VIDEOS)
+            .filterIsInstance<StreamInfoItem>()
+            .filter { it.isShortFormContent }
+            .map { it.toVideoItem() }
+    }
 
     suspend fun suggestions(query: String): List<String> = withContext(Dispatchers.IO) {
         runCatching { service.suggestionExtractor.suggestionList(query) }.getOrDefault(emptyList())

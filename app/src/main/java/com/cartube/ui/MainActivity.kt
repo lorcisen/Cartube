@@ -93,6 +93,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .add(R.id.content, ForYouFragment(), TAG_FOR_YOU)
                 .add(R.id.content, HomeFragment(), TAG_HOME)
+                .add(R.id.content, ExploreFragment(), TAG_EXPLORE)
                 .add(R.id.content, SearchFragment(), TAG_SEARCH)
                 .add(R.id.content, LibraryFragment(), TAG_LIBRARY)
                 .commitNow()
@@ -149,6 +150,7 @@ class MainActivity : AppCompatActivity() {
         binding.miniPlayer.setOnClickListener {
             startActivity(Intent(this, PlayerActivity::class.java))
         }
+        setUpMiniPlayerSwipes()
         binding.miniPlayPause.setOnClickListener {
             val c = controller ?: return@setOnClickListener
             if (c.isPlaying) c.pause() else c.play()
@@ -157,6 +159,70 @@ class MainActivity : AppCompatActivity() {
             controller?.run {
                 stop()
                 clearMediaItems()
+            }
+        }
+    }
+
+    /**
+     * Swipe the mini player sideways to stop and close it, or upwards to open the player.
+     * Taps still go to its buttons and open the player as before.
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun setUpMiniPlayerSwipes() {
+        val card = binding.miniPlayer
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        var startX = 0f
+        var startY = 0f
+        var dragging = false
+        card.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    startX = event.rawX
+                    startY = event.rawY
+                    dragging = false
+                    false
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - startX
+                    val dy = event.rawY - startY
+                    if (!dragging && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) dragging = true
+                    if (dragging && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                        view.translationX = dx
+                        view.alpha = 1f - (kotlin.math.abs(dx) / view.width).coerceIn(0f, 0.8f)
+                    } else if (dragging && dy < 0) {
+                        view.translationY = dy / 3
+                    }
+                    dragging
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    val dx = event.rawX - startX
+                    val dy = event.rawY - startY
+                    when {
+                        !dragging -> {
+                            if (event.actionMasked == android.view.MotionEvent.ACTION_UP) view.performClick()
+                        }
+                        kotlin.math.abs(dx) > view.width / 3f -> {
+                            view.animate().translationX(if (dx > 0) view.width.toFloat() else -view.width.toFloat())
+                                .alpha(0f).setDuration(150)
+                                .withEndAction {
+                                    controller?.run {
+                                        stop()
+                                        clearMediaItems()
+                                    }
+                                    view.translationX = 0f
+                                    view.translationY = 0f
+                                    view.alpha = 1f
+                                }
+                        }
+                        dy < -slop * 4 -> {
+                            view.animate().translationY(0f).setDuration(120)
+                            startActivity(Intent(this, PlayerActivity::class.java))
+                        }
+                        else -> view.animate().translationX(0f).translationY(0f).alpha(1f).setDuration(150)
+                    }
+                    dragging
+                }
+                else -> false
             }
         }
     }
@@ -206,6 +272,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun tagFor(itemId: Int) = when (itemId) {
         R.id.nav_home -> TAG_HOME
+        R.id.nav_explore -> TAG_EXPLORE
         R.id.nav_search -> TAG_SEARCH
         R.id.nav_library -> TAG_LIBRARY
         else -> TAG_FOR_YOU
@@ -213,7 +280,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun show(tag: String) {
         val transaction = supportFragmentManager.beginTransaction()
-        for (tagged in listOf(TAG_FOR_YOU, TAG_HOME, TAG_SEARCH, TAG_LIBRARY)) {
+        for (tagged in listOf(TAG_FOR_YOU, TAG_HOME, TAG_EXPLORE, TAG_SEARCH, TAG_LIBRARY)) {
             val fragment: Fragment = supportFragmentManager.findFragmentByTag(tagged) ?: continue
             if (tagged == tag) transaction.show(fragment) else transaction.hide(fragment)
         }
@@ -322,6 +389,7 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         const val TAG_FOR_YOU = "for_you"
         const val TAG_HOME = "home"
+        const val TAG_EXPLORE = "explore"
         const val TAG_SEARCH = "search"
         const val TAG_LIBRARY = "library"
         const val TAKEOUT_URL = "https://takeout.google.com/takeout/custom/youtube"

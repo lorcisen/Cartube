@@ -50,6 +50,8 @@ object VideoActions {
             PlayQueue.add(item)
             Toast.makeText(activity, R.string.queued, Toast.LENGTH_SHORT).show()
         }
+        action(binding.watchLater) { toggleLater(activity, Library.WATCH_LATER, item) }
+        action(binding.listenLater) { toggleLater(activity, Library.LISTEN_LATER, item) }
         action(binding.addToPlaylist) { pickPlaylist(activity, item) }
         action(binding.download) { DownloadDialog.show(activity, item) }
         action(binding.share) { activity.shareVideo(item) }
@@ -67,6 +69,16 @@ object VideoActions {
             Toast.makeText(activity, activity.getString(R.string.blocked_done, item.uploader), Toast.LENGTH_SHORT).show()
         }
         sheet.show()
+    }
+
+    fun toggleLater(activity: AppCompatActivity, list: String, item: VideoItem) {
+        val added = Library.toggleLater(list, item)
+        val message = when {
+            !added -> R.string.removed_later
+            list == Library.WATCH_LATER -> R.string.added_watch_later
+            else -> R.string.added_listen_later
+        }
+        Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
     }
 
     fun pickPlaylist(activity: AppCompatActivity, item: VideoItem) {

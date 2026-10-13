@@ -57,6 +57,18 @@
             app:drawableStartCompat="@drawable/ic_queue" />
 
         <TextView
+            android:id="@+id/watchLater"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/watch_later"
+            app:drawableStartCompat="@drawable/ic_watch_later" />
+
+        <TextView
+            android:id="@+id/listenLater"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/listen_later"
+            app:drawableStartCompat="@drawable/ic_headphones" />
+
+        <TextView
             android:id="@+id/addToPlaylist"
             style="@style/CarTube.SheetItem"
             android:text="@string/add_to_playlist"
