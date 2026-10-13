@@ -41,6 +41,7 @@ class ChannelActivity : AppCompatActivity() {
         binding.toolbar.title = channel.name
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.list.adapter = ConcatAdapter(header, videos)
+        binding.list.useGrid { it == 0 }
         load()
     }
 

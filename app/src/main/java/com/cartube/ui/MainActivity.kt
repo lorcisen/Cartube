@@ -32,11 +32,15 @@ import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.navigation.NavigationBarView
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
+    /** Bottom bar on phones, navigation rail on tablets (same id in both layouts). */
+    private val nav: NavigationBarView get() = findViewById(R.id.bottomNav)
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -77,11 +81,11 @@ class MainActivity : AppCompatActivity() {
                 .add(R.id.content, LibraryFragment(), TAG_LIBRARY)
                 .commitNow()
         }
-        binding.bottomNav.setOnItemSelectedListener { item ->
+        nav.setOnItemSelectedListener { item ->
             show(tagFor(item.itemId))
             true
         }
-        show(tagFor(binding.bottomNav.selectedItemId))
+        show(tagFor(nav.selectedItemId))
 
         askForNotificationPermission()
         if (savedInstanceState == null) handleShare(intent)
@@ -200,11 +204,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun showSearch() {
-        binding.bottomNav.selectedItemId = R.id.nav_search
+        nav.selectedItemId = R.id.nav_search
     }
 
     fun showChannelSearch() {
-        binding.bottomNav.selectedItemId = R.id.nav_search
+        nav.selectedItemId = R.id.nav_search
         (supportFragmentManager.findFragmentByTag(TAG_SEARCH) as? SearchFragment)?.focusChannelSearch()
     }
 
@@ -235,7 +239,7 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.import_done, added, channels.size),
                     Toast.LENGTH_LONG,
                 ).show()
-                binding.bottomNav.selectedItemId = R.id.nav_home
+                nav.selectedItemId = R.id.nav_home
             }.onFailure {
                 MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle(R.string.import_failed)

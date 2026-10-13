@@ -12,6 +12,7 @@ import android.util.Rational
 import android.view.LayoutInflater
 import android.view.OrientationEventListener
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -202,7 +203,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onPictureInPictureModeChanged(isInPip, newConfig)
         binding.playerView.useController = !isInPip
         binding.castButton.isVisible = !isInPip
-        binding.details.isVisible = !isInPip && newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE
+        applyOrientation(newConfig)
     }
 
     override fun onUserLeaveHint() {
@@ -375,7 +376,15 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    /** On tablets fullscreen is a choice, not a rotation, since landscape shows details beside the video. */
+    private var tabletFullscreen = false
+
     private fun setFullscreen(fullscreen: Boolean) {
+        if (isTablet) {
+            tabletFullscreen = fullscreen
+            applyOrientation(resources.configuration)
+            return
+        }
         requestedOrientation = if (fullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
@@ -386,16 +395,48 @@ class PlayerActivity : AppCompatActivity() {
     private fun autoRotateEnabled() =
         Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
 
+    /**
+     * Phones: portrait shows details under the video, landscape is fullscreen.
+     * Tablets: portrait the same, landscape puts the details beside the video, and
+     * fullscreen is toggled with the button.
+     */
     private fun applyOrientation(config: Configuration) {
         val landscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE
-        binding.details.isVisible = !landscape && !isInPictureInPictureMode
-        binding.playerView.setFullscreenButtonState(landscape)
-        exitFullscreenOnBack.isEnabled = landscape
-        binding.playerContainer.layoutParams = binding.playerContainer.layoutParams.apply {
-            height = if (landscape) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
+        val fullscreen = if (isTablet) tabletFullscreen else landscape
+        val sideBySide = isTablet && landscape && !fullscreen
+
+        binding.root.orientation = if (sideBySide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        binding.playerContainer.layoutParams = (binding.playerContainer.layoutParams as LinearLayout.LayoutParams).apply {
+            if (sideBySide) {
+                width = 0
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+                weight = 0.62f
+            } else {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = if (fullscreen) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
+                weight = 0f
+            }
         }
+        binding.details.layoutParams = (binding.details.layoutParams as LinearLayout.LayoutParams).apply {
+            if (sideBySide) {
+                width = 0
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+                weight = 0.38f
+            } else {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = 0
+                weight = 1f
+            }
+        }
+        binding.details.isVisible = !fullscreen && !isInPictureInPictureMode
+        binding.playerView.setFullscreenButtonState(fullscreen)
+        exitFullscreenOnBack.isEnabled = fullscreen
+
+        val detailsWidth = if (sideBySide) (config.screenWidthDp * 0.38f).toInt() else config.screenWidthDp
+        binding.details.useGrid(minItemWidthDp = 380, availableWidthDp = detailsWidth) { it == 0 }
+
         val insets = WindowCompat.getInsetsController(window, window.decorView)
-        if (landscape) {
+        if (fullscreen) {
             insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             insets.hide(WindowInsetsCompat.Type.systemBars())
         } else {

@@ -125,6 +125,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val b = binding ?: return
         if (showingPlaylists) {
             b.list.adapter = playlistAdapter
+            b.list.useGrid(minItemWidthDp = 380)
             playlistAdapter.submitList(
                 playlists.map {
                     PlaylistAdapter.Row(
@@ -140,9 +141,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             )
         } else if (showingChannels) {
             b.list.adapter = channelAdapter
+            b.list.useGrid(minItemWidthDp = 300)
             channelAdapter.submitList(channels)
         } else {
             b.list.adapter = videoAdapter
+            b.list.useGrid()
             videoAdapter.submitList(videos)
         }
         val empty = when {

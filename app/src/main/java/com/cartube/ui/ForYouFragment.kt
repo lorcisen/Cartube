@@ -48,6 +48,7 @@ class ForYouFragment : Fragment(R.layout.fragment_for_you) {
         val b = FragmentForYouBinding.bind(view)
         binding = b
         b.list.adapter = adapter
+        b.list.useGrid()
         b.continueList.adapter = continueAdapter
         showContinue()
         b.refresh.setOnRefreshListener { load(force = true) }

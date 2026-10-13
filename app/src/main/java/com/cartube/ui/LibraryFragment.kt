@@ -157,6 +157,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
 
         val empty = if (playlists) {
             b.list.adapter = playlistAdapter
+            b.list.useGrid(minItemWidthDp = 380)
             val rows = Library.playlists().map {
                 PlaylistAdapter.Row(
                     key = it.id,
@@ -169,6 +170,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             rows.isEmpty()
         } else if (downloads) {
             b.list.adapter = downloadAdapter
+            b.list.useGrid(minItemWidthDp = 380)
             val items = runCatching { Downloads.entries() }.getOrDefault(emptyList()).map { entry ->
                 when {
                     entry.done -> entry.video
@@ -180,11 +182,13 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             items.isEmpty()
         } else if (channels) {
             b.list.adapter = channelAdapter
+            b.list.useGrid(minItemWidthDp = 300)
             val items = Library.subscriptions()
             channelAdapter.submitList(items)
             items.isEmpty()
         } else {
             b.list.adapter = videoAdapter
+            b.list.useGrid(minItemWidthDp = 380)
             val items = if (history) Library.history() else Library.favorites()
             videoAdapter.submitList(items)
             items.isEmpty()

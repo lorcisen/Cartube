@@ -42,6 +42,7 @@ class PlaylistActivity : AppCompatActivity() {
         binding.root.padForSystemBars()
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.list.adapter = adapter
+        binding.list.useGrid(minItemWidthDp = 380)
         binding.playAll.setOnClickListener { play(shuffle = false) }
         binding.shuffle.setOnClickListener { play(shuffle = true) }
         binding.save.setOnClickListener {

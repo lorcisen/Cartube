@@ -30,6 +30,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val b = FragmentHomeBinding.bind(view)
         binding = b
         b.list.adapter = adapter
+        b.list.useGrid()
         b.refresh.setOnRefreshListener { load(force = true) }
         b.importButton.setOnClickListener { (activity as? MainActivity)?.startImport() }
         b.findChannelsButton.setOnClickListener { (activity as? MainActivity)?.showChannelSearch() }
