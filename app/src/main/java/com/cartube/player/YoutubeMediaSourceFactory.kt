@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.cartube.net.Http
+import com.cartube.data.Downloads
 import com.cartube.data.Settings
 import com.cartube.youtube.StreamCache
 import org.schabi.newpipe.extractor.MediaFormat
@@ -57,6 +58,8 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
     override fun getSupportedTypes(): IntArray = fallback.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+        // Downloaded videos play from the phone, with no network at all.
+        runCatching { Downloads.localSource(mediaItem) }.getOrNull()?.let { return it }
         val info = StreamCache.get(mediaItem.mediaId)
             ?: return fallback.createMediaSource(mediaItem)
         return try {

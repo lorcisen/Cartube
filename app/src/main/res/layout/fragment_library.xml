@@ -78,6 +78,20 @@
                 android:text="@string/tab_history" />
 
             <com.google.android.material.chip.Chip
+                android:id="@+id/chipPlaylists"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/playlists" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipDownloads"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/downloads" />
+
+            <com.google.android.material.chip.Chip
                 android:id="@+id/chipSubscriptions"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
@@ -95,6 +109,16 @@
         android:text="@string/import_title"
         android:visibility="gone"
         app:icon="@drawable/ic_download" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/newPlaylistButton"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/playlist_new"
+        android:visibility="gone"
+        app:icon="@drawable/ic_playlist_add" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clearHistoryButton"

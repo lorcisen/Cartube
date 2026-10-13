@@ -22,6 +22,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var searchJob: Job? = null
     private var videos: List<VideoItem> = emptyList()
     private var channels: List<Channel> = emptyList()
+    private var playlists: List<YouTube.PlaylistSummary> = emptyList()
     private var lastQuery = ""
 
     private val videoAdapter = VideoAdapter(
@@ -29,8 +30,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         onClick = { requireContext().openVideo(it) },
     )
     private val channelAdapter = ChannelAdapter { requireContext().openChannel(it) }
+    private val playlistAdapter = PlaylistAdapter { PlaylistActivity.remote(requireContext(), it.key) }
 
     private val showingChannels get() = binding?.chipChannels?.isChecked == true
+    private val showingPlaylists get() = binding?.chipPlaylists?.isChecked == true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = FragmentSearchBinding.bind(view)
@@ -67,14 +70,33 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun showResults() {
         val b = binding ?: return
-        if (showingChannels) {
+        if (showingPlaylists) {
+            b.list.adapter = playlistAdapter
+            playlistAdapter.submitList(
+                playlists.map {
+                    PlaylistAdapter.Row(
+                        key = it.url,
+                        name = it.name,
+                        meta = listOfNotNull(
+                            it.uploader.takeIf { u -> u.isNotBlank() },
+                            it.count.takeIf { c -> c >= 0 }?.let { c -> getString(R.string.videos_count, c.toInt()) },
+                        ).joinToString(" · "),
+                        thumbnail = it.thumbnail,
+                    )
+                },
+            )
+        } else if (showingChannels) {
             b.list.adapter = channelAdapter
             channelAdapter.submitList(channels)
         } else {
             b.list.adapter = videoAdapter
             videoAdapter.submitList(videos)
         }
-        val empty = if (showingChannels) channels.isEmpty() else videos.isEmpty()
+        val empty = when {
+            showingPlaylists -> playlists.isEmpty()
+            showingChannels -> channels.isEmpty()
+            else -> videos.isEmpty()
+        }
         b.empty.isVisible = empty && searchJob?.isActive != true
         b.empty.setText(if (lastQuery.isBlank()) R.string.empty_search else R.string.no_results)
     }
@@ -92,9 +114,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         b.progress.isVisible = true
         b.empty.isVisible = false
         val forChannels = showingChannels
+        val forPlaylists = showingPlaylists
         searchJob = viewLifecycleOwner.lifecycleScope.launch {
             val result = runCatching {
-                if (forChannels) channels = YouTube.searchChannels(query) else videos = YouTube.search(query)
+                when {
+                    forPlaylists -> playlists = YouTube.searchPlaylists(query)
+                    forChannels -> channels = YouTube.searchChannels(query)
+                    else -> videos = YouTube.search(query)
+                }
             }
             val current = binding ?: return@launch
             current.progress.isVisible = false

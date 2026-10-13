@@ -24,11 +24,14 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import android.os.Bundle
 import com.cartube.R
+import com.cartube.data.Downloads
 import com.cartube.data.Feed
 import com.cartube.data.Library
 import com.cartube.data.Recommendations
+import com.cartube.data.Positions
 import com.cartube.data.Settings
 import com.cartube.ui.PlayerActivity
+import com.cartube.youtube.StreamCache
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
 import com.cartube.youtube.YouTube.toVideoItem
@@ -59,8 +62,28 @@ class PlaybackService : MediaLibraryService() {
     private var session: MediaLibrarySession? = null
 
     private lateinit var carConnection: LiveData<Int>
+    private var inCar = false
     private val carObserver = Observer<Int> { type ->
-        setVideoEnabled(type != CarConnection.CONNECTION_TYPE_PROJECTION)
+        inCar = type == CarConnection.CONNECTION_TYPE_PROJECTION
+        updateVideoEnabled()
+    }
+
+    private val audioEffects = AudioEffects()
+    private val settingsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            Settings.KEY_AUDIO_ONLY -> updateVideoEnabled()
+            Settings.KEY_NORMALIZE, Settings.KEY_CLEAR_SPEECH -> audioEffects.refresh()
+        }
+    }
+    private val queueListener: () -> Unit = { handler.post { prefetchNext() } }
+    private var prefetchJob: kotlinx.coroutines.Job? = null
+
+    /** Saves the playback position every few seconds so videos resume where they stopped. */
+    private val savePosition = object : Runnable {
+        override fun run() {
+            rememberPosition()
+            handler.postDelayed(this, 10_000)
+        }
     }
 
     private val isCasting get() = castPlayer != null && session?.player === castPlayer
@@ -76,7 +99,30 @@ class PlaybackService : MediaLibraryService() {
                 session?.player?.setPlaybackSpeed(Settings.defaultSpeed)
             }
             applySubtitlePreference()
+            mediaItem?.let { PlayQueue.consumed(it.mediaId) }
+            prefetchNext()
         }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            // Leaving a video: remember where it was left.
+            val old = oldPosition.mediaItem ?: return
+            if (old.mediaId != newPosition.mediaItem?.mediaId) {
+                // The player already reports the new video's duration, so use the old one's info.
+                val duration = StreamCache.get(old.mediaId)?.duration?.times(1000) ?: return
+                Positions.save(old.mediaId, oldPosition.positionMs, duration)
+            }
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            handler.removeCallbacks(savePosition)
+            if (isPlaying) handler.postDelayed(savePosition, 10_000) else rememberPosition()
+        }
+
+        override fun onAudioSessionIdChanged(audioSessionId: Int) = audioEffects.apply(audioSessionId)
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) playNextRelated()
@@ -145,6 +191,10 @@ class PlaybackService : MediaLibraryService() {
         skipper = SegmentSkipper(this, scope)
         skipper.attach(exoPlayer)
         exoPlayer.addListener(playerListener)
+        Settings.addListener(settingsListener)
+        PlayQueue.addListener(queueListener)
+        updateVideoEnabled()
+        audioEffects.apply(exoPlayer.audioSessionId)
 
         castPlayer = runCatching { CastPlayer(CastContext.getSharedInstance(this)) }
             .onFailure { Log.w(TAG, "Cast is not available", it) }
@@ -168,6 +218,11 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         carConnection.removeObserver(carObserver)
         handler.removeCallbacks(sleep)
+        handler.removeCallbacks(savePosition)
+        rememberPosition()
+        Settings.removeListener(settingsListener)
+        PlayQueue.removeListener(queueListener)
+        audioEffects.release()
         skipper.release()
         scope.cancel()
         castPlayer?.run {
@@ -190,6 +245,44 @@ class PlaybackService : MediaLibraryService() {
             .setIgnoredTextSelectionFlags(if (off) C.SELECTION_FLAG_DEFAULT else 0)
             .build()
     }
+
+    private fun rememberPosition() {
+        val player = session?.player ?: return
+        val item = player.currentMediaItem ?: return
+        if (player.duration > 0) Positions.save(item.mediaId, player.currentPosition, player.duration)
+    }
+
+    /**
+     * Hands the first queued video to the player as the next item, resolving its streams
+     * ahead of time. Anything after the current item that no longer matches the queue is
+     * dropped first, so "Spela härnäst" takes effect immediately.
+     */
+    private fun prefetchNext() {
+        val player = session?.player ?: return
+        val next = PlayQueue.peek()
+        val index = player.currentMediaItemIndex
+        val following = if (index + 1 < player.mediaItemCount) player.getMediaItemAt(index + 1) else null
+        if (following != null && following.mediaId == next?.url) return
+        if (following != null) player.removeMediaItems(index + 1, player.mediaItemCount)
+        if (next == null || player.mediaItemCount == 0) return
+        prefetchJob?.cancel()
+        prefetchJob = scope.launch {
+            val item = resolve(next.toMediaItem(), addToHistory = false) ?: run {
+                PlayQueue.remove(next.url)
+                return@launch
+            }
+            val p = session?.player ?: return@launch
+            if (PlayQueue.peek()?.url != next.url) return@launch
+            val ended = p.playbackState == Player.STATE_ENDED
+            p.addMediaItem(p.currentMediaItemIndex + 1, item)
+            if (ended) {
+                p.seekToNextMediaItem()
+                p.play()
+            }
+        }
+    }
+
+    private fun updateVideoEnabled() = setVideoEnabled(!inCar && !Settings.audioOnly)
 
     private fun setVideoEnabled(enabled: Boolean) {
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
@@ -227,12 +320,14 @@ class PlaybackService : MediaLibraryService() {
     /** With autoplay on, queues the top related video the user has not seen when one ends. */
     private fun playNextRelated() {
         val player = session?.player ?: return
+        if (PlayQueue.peek() != null) return prefetchNext()
         if (!Settings.autoplay || player.hasNextMediaItem() || autoplayJob?.isActive == true) return
         val current = player.currentMediaItem?.mediaId ?: return
         autoplayJob = scope.launch {
             val info = runCatching { YouTube.streamInfo(current) }.getOrNull() ?: return@launch
             val watched = Library.history().map { it.url }.toSet()
-            val next = YouTube.related(info).firstOrNull { it.url !in watched } ?: return@launch
+            val hidden = Library.hiddenFilter()
+            val next = YouTube.related(info).firstOrNull { it.url !in watched && !hidden(it) } ?: return@launch
             val item = resolve(next.toMediaItem()) ?: return@launch
             val p = session?.player ?: return@launch
             if (p.playbackState != Player.STATE_ENDED) return@launch
@@ -249,15 +344,20 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /** Fetches stream URLs for an item; also handles voice requests ("play X"). */
-    private suspend fun resolve(item: MediaItem): MediaItem? {
+    private suspend fun resolve(item: MediaItem, addToHistory: Boolean = true): MediaItem? {
         val url = item.mediaId.ifBlank {
             val query = item.requestMetadata.searchQuery ?: return null
             YouTube.search(query).firstOrNull()?.url ?: return null
         }
+        // Offline: use what was saved with the download instead of asking YouTube.
+        runCatching { Downloads.find(url) }.getOrNull()?.takeIf { it.done }?.let { entry ->
+            if (addToHistory) Library.addToHistory(entry.video)
+            return entry.video.toMediaItem()
+        }
         return try {
             val info = YouTube.streamInfo(url)
             val video = info.toVideoItem()
-            Library.addToHistory(video)
+            if (addToHistory) Library.addToHistory(video)
             val resolved = video.toMediaItem()
             if (isCasting) castableItem(resolved) else resolved
         } catch (e: Exception) {
@@ -396,6 +496,27 @@ class PlaybackService : MediaLibraryService() {
                 throw IllegalStateException("None of the requested videos could be loaded")
             }
             resolved.toMutableList()
+        }
+
+        override fun onSetMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+            startIndex: Int,
+            startPositionMs: Long,
+        ): ListenableFuture<MediaItemsWithStartPosition> = scope.future {
+            val resolved = mediaItems.mapNotNull { resolve(it) }
+            if (resolved.isEmpty() && mediaItems.isNotEmpty()) {
+                throw IllegalStateException("None of the requested videos could be loaded")
+            }
+            val index = if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, maxOf(resolved.size - 1, 0))
+            // Continue where the video was left off, unless a position was asked for.
+            val position = if (startPositionMs == C.TIME_UNSET) {
+                resolved.getOrNull(index)?.let { Positions.resumeAt(it.mediaId) } ?: 0
+            } else {
+                startPositionMs
+            }
+            MediaItemsWithStartPosition(resolved, index, position)
         }
 
         override fun onPlaybackResumption(

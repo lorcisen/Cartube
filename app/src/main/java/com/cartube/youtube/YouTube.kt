@@ -8,6 +8,11 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.InfoItem
+import org.schabi.newpipe.extractor.Page
+import org.schabi.newpipe.extractor.comments.CommentsInfo
+import org.schabi.newpipe.extractor.comments.CommentsInfoItem
+import org.schabi.newpipe.extractor.playlist.PlaylistInfo
+import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
@@ -34,6 +39,72 @@ object YouTube {
         searchInfo(query, YoutubeSearchQueryHandlerFactory.CHANNELS)
             .filterIsInstance<ChannelInfoItem>()
             .map { Channel(it.url, it.name, VideoItem.bestImage(it.thumbnails, 240)) }
+    }
+
+    class PlaylistSummary(val url: String, val name: String, val uploader: String, val thumbnail: String?, val count: Long)
+
+    suspend fun searchPlaylists(query: String): List<PlaylistSummary> = withContext(Dispatchers.IO) {
+        searchInfo(query, YoutubeSearchQueryHandlerFactory.PLAYLISTS)
+            .filterIsInstance<PlaylistInfoItem>()
+            .map { PlaylistSummary(it.url, it.name, it.uploaderName.orEmpty(), VideoItem.bestImage(it.thumbnails), it.streamCount) }
+    }
+
+    class PlaylistPage(val name: String, val uploader: String, val thumbnail: String?, val videos: List<VideoItem>)
+
+    /** A YouTube playlist with up to [limit] videos (following YouTube's pages). */
+    suspend fun playlist(url: String, limit: Int = 300): PlaylistPage = withContext(Dispatchers.IO) {
+        val info = PlaylistInfo.getInfo(service, url)
+        val videos = info.relatedItems.toMutableList()
+        var page = info.nextPage
+        while (page != null && videos.size < limit) {
+            val more = PlaylistInfo.getMoreItems(service, url, page)
+            videos += more.items
+            page = more.nextPage
+        }
+        PlaylistPage(
+            name = info.name,
+            uploader = info.uploaderName.orEmpty(),
+            thumbnail = VideoItem.bestImage(info.thumbnails),
+            videos = videos.map { it.toVideoItem() },
+        )
+    }
+
+    class Comment(
+        val author: String,
+        val avatar: String?,
+        val text: String,
+        val likes: Int,
+        val age: String,
+        val replies: Int,
+        val pinned: Boolean,
+        val hearted: Boolean,
+    )
+
+    class CommentsPage(val comments: List<Comment>, val total: Int, val disabled: Boolean, val next: Page?)
+
+    suspend fun comments(url: String, page: Page? = null): CommentsPage = withContext(Dispatchers.IO) {
+        if (page == null) {
+            val info = CommentsInfo.getInfo(service, url)
+            CommentsPage(info.relatedItems.map { it.toComment() }, info.commentsCount, info.isCommentsDisabled, info.nextPage)
+        } else {
+            val more = CommentsInfo.getMoreItems(service, url, page)
+            CommentsPage(more.items.map { it.toComment() }, -1, false, more.nextPage)
+        }
+    }
+
+    private fun CommentsInfoItem.toComment() = Comment(
+        author = uploaderName.orEmpty(),
+        avatar = VideoItem.bestImage(uploaderAvatars, 120),
+        text = commentText?.content.orEmpty(),
+        likes = likeCount,
+        age = textualUploadDate.orEmpty(),
+        replies = replyCount,
+        pinned = isPinned,
+        hearted = isHeartedByUploader,
+    )
+
+    suspend fun suggestions(query: String): List<String> = withContext(Dispatchers.IO) {
+        runCatching { service.suggestionExtractor.suggestionList(query) }.getOrDefault(emptyList())
     }
 
     private fun searchInfo(query: String, filter: String): List<InfoItem> {

@@ -27,6 +27,17 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="8dp" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/watchProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:visibility="gone"
+                app:indicatorColor="@color/brand"
+                app:trackColor="#66FFFFFF"
+                app:trackCornerRadius="0dp"
+                app:trackThickness="3dp" />
     </androidx.media3.ui.AspectRatioFrameLayout>
 
     <LinearLayout

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="16dp">
+
+        <androidx.media3.ui.AspectRatioFrameLayout
+            android:id="@+id/previewFrame"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            app:resize_mode="fixed_width">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/preview"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeRounded12" />
+        </androidx.media3.ui.AspectRatioFrameLayout>
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:paddingHorizontal="16dp"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <TextView
+            android:id="@+id/meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/playNext"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/play_next"
+            app:drawableStartCompat="@drawable/ic_play_next" />
+
+        <TextView
+            android:id="@+id/addToQueue"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/add_to_queue"
+            app:drawableStartCompat="@drawable/ic_queue" />
+
+        <TextView
+            android:id="@+id/addToPlaylist"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/add_to_playlist"
+            app:drawableStartCompat="@drawable/ic_playlist_add" />
+
+        <TextView
+            android:id="@+id/download"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/download"
+            app:drawableStartCompat="@drawable/ic_download" />
+
+        <TextView
+            android:id="@+id/share"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/share"
+            app:drawableStartCompat="@drawable/ic_share" />
+
+        <TextView
+            android:id="@+id/notInterested"
+            style="@style/CarTube.SheetItem"
+            android:text="@string/not_interested"
+            app:drawableStartCompat="@drawable/ic_block" />
+
+        <TextView
+            android:id="@+id/blockChannel"
+            style="@style/CarTube.SheetItem"
+            app:drawableStartCompat="@drawable/ic_block" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

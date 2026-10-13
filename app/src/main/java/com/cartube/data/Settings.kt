@@ -21,6 +21,10 @@ object Settings {
     const val SUBTITLES_ORIGINAL = "original"
     const val SUBTITLES_OFF = "off"
     const val KEY_SUBTITLE_SIZE = "subtitle_size"
+    const val KEY_AUDIO_ONLY = "audio_only"
+    const val KEY_NORMALIZE = "normalize_volume"
+    const val KEY_CLEAR_SPEECH = "clear_speech"
+    const val KEY_DOWNLOAD_QUALITY = "download_quality"
     const val KEY_THEME = "theme"
     const val KEY_AMOLED = "amoled"
     const val KEY_DYNAMIC_COLOR = "dynamic_color"
@@ -63,6 +67,18 @@ object Settings {
     val subtitles: String get() = prefs.getString(KEY_SUBTITLES, SUBTITLES_SWEDISH) ?: SUBTITLES_SWEDISH
     /** Subtitle height as a fraction of the video height. */
     val subtitleSize: Float get() = prefs.getString(KEY_SUBTITLE_SIZE, "0.0533")?.toFloatOrNull() ?: 0.0533f
+    var audioOnly: Boolean
+        get() = prefs.getBoolean(KEY_AUDIO_ONLY, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUDIO_ONLY, value).apply()
+    val normalizeVolume: Boolean get() = prefs.getBoolean(KEY_NORMALIZE, false)
+    val clearSpeech: Boolean get() = prefs.getBoolean(KEY_CLEAR_SPEECH, false)
+
+    fun addListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+    fun removeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
+
     val amoled: Boolean get() = prefs.getBoolean(KEY_AMOLED, false)
     val dynamicColor: Boolean get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
 

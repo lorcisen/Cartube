@@ -131,4 +131,81 @@
     <string name="update_check">Sök efter uppdatering</string>
     <string name="pref_about">Om</string>
     <string name="pref_version">Version</string>
+
+    <!-- Queue, playlists, blocking -->
+    <string name="preview">Förhandsvisning</string>
+    <string name="play_next">Spela härnäst</string>
+    <string name="add_to_queue">Lägg i kö</string>
+    <string name="queued_next">Spelas härnäst</string>
+    <string name="queued">Tillagd i kön</string>
+    <string name="queue">Kö</string>
+    <string name="queue_empty">Kön är tom. Håll fingret på en video för att lägga den i kön.</string>
+    <string name="queue_clear">Töm kön</string>
+    <string name="add_to_playlist">Lägg till i spellista</string>
+    <string name="added_to_playlist">Tillagd i %1$s</string>
+    <string name="playlist_new">Ny spellista</string>
+    <string name="playlist_name">Namn</string>
+    <string name="playlists">Spellistor</string>
+    <string name="empty_playlists">Inga spellistor än. Håll fingret på en video och välj Lägg till i spellista, eller spara en spellista från YouTube.</string>
+    <string name="play_all">Spela alla</string>
+    <string name="shuffle">Blanda</string>
+    <string name="save_playlist">Spara</string>
+    <string name="playlist_saved">Spellistan sparad i biblioteket</string>
+    <string name="playlist_delete">Ta bort spellista</string>
+    <string name="playlist_rename">Byt namn</string>
+    <string name="remove_from_playlist">Ta bort från spellistan</string>
+    <string name="videos_count">%1$d videor</string>
+    <string name="playlist_failed">Kunde inte hämta spellistan: %1$s</string>
+    <string name="filter_playlists">Spellistor</string>
+    <string name="more_options">Fler alternativ</string>
+    <string name="playlist_empty">Spellistan är tom.</string>
+    <string name="not_interested">Inte intresserad</string>
+    <string name="not_interested_done">Du ser färre sådana videor</string>
+    <string name="block_channel">Blockera %1$s</string>
+    <string name="blocked_done">%1$s blockerad</string>
+    <string name="blocked_channels">Blockerade kanaler</string>
+    <string name="blocked_none">Inga blockerade kanaler.</string>
+    <string name="unblock">Ta bort blockering</string>
+
+    <!-- Downloads -->
+    <string name="download">Ladda ner</string>
+    <string name="downloads">Nedladdat</string>
+    <string name="download_choose">Ladda ner som</string>
+    <string name="download_audio">Bara ljud</string>
+    <string name="download_started">Nedladdningen har startat</string>
+    <string name="download_failed">Kunde inte starta nedladdningen: %1$s</string>
+    <string name="download_delete">Ta bort nedladdning</string>
+    <string name="downloads_empty">Inget nedladdat än. Håll fingret på en video och välj Ladda ner.</string>
+    <string name="download_progress">Laddar ner… %1$d %%</string>
+    <string name="download_channel">Nedladdningar</string>
+    <string name="pref_download_quality">Kvalitet för nedladdning</string>
+
+    <!-- Player additions -->
+    <string name="comments">Kommentarer</string>
+    <string name="comments_count">Kommentarer · %1$s</string>
+    <string name="comments_disabled">Kommentarer är avstängda för den här videon.</string>
+    <string name="comments_failed">Kunde inte hämta kommentarer: %1$s</string>
+    <string name="load_more">Visa fler</string>
+    <string name="replies">%1$d svar</string>
+    <string name="chapters">Kapitel</string>
+    <string name="audio_only">Bara ljud</string>
+    <string name="audio_only_on">Bara ljud: video hämtas inte</string>
+    <string name="continue_watching">Fortsätt titta</string>
+
+    <!-- Audio -->
+    <string name="pref_audio">Ljud</string>
+    <string name="pref_normalize">Jämn volym</string>
+    <string name="pref_normalize_summary">Håller samma ljudnivå mellan tysta och höga videor</string>
+    <string name="pref_clear_speech">Tydligare tal</string>
+    <string name="pref_clear_speech_summary">Framhäver röster, bra för poddar och föreläsningar</string>
+    <string name="pref_audio_only">Bara ljud</string>
+    <string name="pref_audio_only_summary">Spela bara ljudet, sparar data och batteri</string>
+
+    <!-- Search -->
+    <string name="search_history_clear">Rensa sökhistorik</string>
+    <string name="pref_blocked">Blockerade kanaler</string>
+
+    <!-- Widget -->
+    <string name="widget_name">CarTube – senaste videorna</string>
+    <string name="widget_empty">Öppna CarTube för att hämta dina prenumerationer.</string>
 </resources>

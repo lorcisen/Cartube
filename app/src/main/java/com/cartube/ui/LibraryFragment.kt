@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.cartube.data.Downloads
 import com.cartube.data.Sync
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
@@ -26,7 +27,15 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         onClick = { requireContext().openVideo(it) },
     )
     private val channelAdapter = ChannelAdapter { requireContext().openChannel(it) }
+    // Saved YouTube playlists are stored by URL; PlaylistActivity resolves both kinds.
+    private val playlistAdapter = PlaylistAdapter { row -> PlaylistActivity.local(requireContext(), row.key) }
+    private val downloadAdapter = VideoAdapter(
+        compact = true,
+        onLongClick = { item -> confirmDeleteDownload(item) },
+        onClick = { requireContext().openVideo(it) },
+    )
     private val subscriptionsChanged: () -> Unit = { refresh() }
+    private val downloadsChanged: () -> Unit = { view?.post { refresh() } }
 
     private val consent = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         runCatching { Sync.finishSignIn(requireActivity(), result.data) }
@@ -43,6 +52,11 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             refresh()
         }
         Library.addSubscriptionListener(subscriptionsChanged)
+        Downloads.addListener(downloadsChanged)
+        b.newPlaylistButton.setOnClickListener {
+            val activity = activity as? androidx.appcompat.app.AppCompatActivity ?: return@setOnClickListener
+            VideoActions.askName(activity) { name -> Library.createPlaylist(name); refresh() }
+        }
         refresh()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -50,6 +64,16 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
                 Sync.state.collect { showSync(it) }
             }
         }
+    }
+
+    private fun confirmDeleteDownload(item: com.cartube.youtube.VideoItem) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(item.title)
+            .setItems(arrayOf(getString(R.string.download_delete), getString(R.string.more_options))) { _, which ->
+                if (which == 0) Downloads.delete(requireContext(), item.url)
+                else (activity as? androidx.appcompat.app.AppCompatActivity)?.let { VideoActions.show(it, item) }
+            }
+            .show()
     }
 
     private fun showSync(state: Sync.State) {
@@ -116,6 +140,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
 
     override fun onDestroyView() {
         Library.removeSubscriptionListener(subscriptionsChanged)
+        Downloads.removeListener(downloadsChanged)
         binding = null
         super.onDestroyView()
     }
@@ -124,10 +149,36 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val b = binding ?: return
         val channels = b.chipSubscriptions.isChecked
         val history = b.chipHistory.isChecked
+        val playlists = b.chipPlaylists.isChecked
+        val downloads = b.chipDownloads.isChecked
         b.importButton.isVisible = channels
+        b.newPlaylistButton.isVisible = playlists
         b.clearHistoryButton.isVisible = history && Library.history().isNotEmpty()
 
-        val empty = if (channels) {
+        val empty = if (playlists) {
+            b.list.adapter = playlistAdapter
+            val rows = Library.playlists().map {
+                PlaylistAdapter.Row(
+                    key = it.id,
+                    name = it.name,
+                    meta = if (it.sourceUrl != null) "YouTube" else getString(R.string.videos_count, it.videos.size),
+                    thumbnail = it.videos.firstOrNull()?.thumbnail,
+                )
+            }
+            playlistAdapter.submitList(rows)
+            rows.isEmpty()
+        } else if (downloads) {
+            b.list.adapter = downloadAdapter
+            val items = runCatching { Downloads.entries() }.getOrDefault(emptyList()).map { entry ->
+                when {
+                    entry.done -> entry.video
+                    entry.failed -> entry.video.copy(uploader = getString(R.string.download_failed, ""), views = -1, uploadedAt = 0)
+                    else -> entry.video.copy(uploader = getString(R.string.download_progress, entry.percent), views = -1, uploadedAt = 0)
+                }
+            }
+            downloadAdapter.submitList(items)
+            items.isEmpty()
+        } else if (channels) {
             b.list.adapter = channelAdapter
             val items = Library.subscriptions()
             channelAdapter.submitList(items)
@@ -141,6 +192,8 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         b.empty.isVisible = empty
         b.empty.setText(
             when {
+                playlists -> R.string.empty_playlists
+                downloads -> R.string.downloads_empty
                 channels -> R.string.empty_subscriptions
                 history -> R.string.empty_history
                 else -> R.string.empty_favorites

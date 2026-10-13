@@ -20,6 +20,12 @@ object Library {
     private const val REMOVED_FAVORITES = "removed_favorites"
     private const val REMOVED_SUBSCRIPTIONS = "removed_subscriptions"
     private const val HISTORY_CLEARED_AT = "history_cleared_at"
+    private const val PLAYLISTS = "playlists"
+    private const val REMOVED_PLAYLISTS = "removed_playlists"
+    private const val BLOCKED = "blocked_channels"
+    private const val REMOVED_BLOCKED = "removed_blocked_channels"
+    private const val NOT_INTERESTED = "not_interested"
+    private const val REMOVED_NOT_INTERESTED = "removed_not_interested"
     private const val MAX_HISTORY = 100
     private const val MAX_TOMBSTONES = 500
 
@@ -123,6 +129,123 @@ object Library {
         )
     }
 
+    // region Playlists
+
+    /** A user playlist. Saved YouTube playlists have [sourceUrl] and are loaded on demand. */
+    data class Playlist(val id: String, val name: String, val videos: List<VideoItem>, val sourceUrl: String? = null)
+
+    @Synchronized
+    fun playlists(): List<Playlist> = readArray(PLAYLISTS).map { json ->
+        Playlist(
+            id = json.getString("url"),
+            name = json.optString("name"),
+            videos = json.optJSONArray("videos")?.objects()?.map(VideoItem::fromJson).orEmpty(),
+            sourceUrl = json.optString("source").takeIf { it.isNotBlank() },
+        )
+    }
+
+    @Synchronized
+    fun playlist(id: String): Playlist? = playlists().firstOrNull { it.id == id }
+
+    fun createPlaylist(name: String, first: VideoItem? = null): Playlist {
+        val playlist = Playlist("local:" + java.util.UUID.randomUUID(), name, listOfNotNull(first))
+        savePlaylist(playlist)
+        return playlist
+    }
+
+    /** Saves a YouTube playlist to the library; its videos are fetched when opened. */
+    fun saveYoutubePlaylist(url: String, name: String) {
+        savePlaylist(Playlist(url, name, emptyList(), sourceUrl = url))
+    }
+
+    fun addToPlaylist(id: String, item: VideoItem) {
+        val playlist = playlist(id) ?: return
+        if (playlist.videos.any { it.url == item.url }) return
+        savePlaylist(playlist.copy(videos = playlist.videos + item))
+    }
+
+    fun removeFromPlaylist(id: String, url: String) {
+        val playlist = playlist(id) ?: return
+        savePlaylist(playlist.copy(videos = playlist.videos.filter { it.url != url }))
+    }
+
+    fun deletePlaylist(id: String) {
+        synchronized(this) {
+            writeArray(PLAYLISTS, readArray(PLAYLISTS).filter { it.getString("url") != id })
+            writeTombstones(REMOVED_PLAYLISTS, readTombstones(REMOVED_PLAYLISTS).toMap() + (id to now()))
+        }
+        notifyChanged()
+    }
+
+    private fun savePlaylist(playlist: Playlist) {
+        synchronized(this) {
+            val json = JSONObject()
+                .put("url", playlist.id)
+                .put("name", playlist.name)
+                .put("source", playlist.sourceUrl ?: "")
+                .put("videos", JSONArray(playlist.videos.map { it.toJson() }))
+                .put("t", now())
+            val rest = readArray(PLAYLISTS).filter { it.getString("url") != playlist.id }
+            writeArray(PLAYLISTS, listOf(json) + rest)
+            removeTombstones(REMOVED_PLAYLISTS, listOf(playlist.id))
+        }
+        notifyChanged()
+    }
+
+    // endregion
+
+    // region Blocking
+
+    @Synchronized
+    fun blockedChannels(): List<Channel> = readArray(BLOCKED).map(Channel::fromJson)
+
+    fun blockChannel(channel: Channel) {
+        synchronized(this) {
+            if (readArray(BLOCKED).none { it.getString("url") == channel.url }) {
+                toggle(BLOCKED, REMOVED_BLOCKED, channel.url, channel.toJson())
+            }
+        }
+        notifyChanged()
+    }
+
+    fun unblockChannel(url: String) {
+        synchronized(this) {
+            if (readArray(BLOCKED).any { it.getString("url") == url }) {
+                toggle(BLOCKED, REMOVED_BLOCKED, url, JSONObject())
+            }
+        }
+        notifyChanged()
+    }
+
+    /** Hides a video and makes its channel less likely to be recommended. */
+    fun markNotInterested(item: VideoItem) {
+        synchronized(this) {
+            val json = JSONObject().put("url", item.url).put("channel", item.uploaderUrl ?: "")
+            if (readArray(NOT_INTERESTED).none { it.getString("url") == item.url }) {
+                toggle(NOT_INTERESTED, REMOVED_NOT_INTERESTED, item.url, json)
+            }
+        }
+        notifyChanged()
+    }
+
+    @Synchronized
+    fun notInterestedChannels(): Map<String, Int> = readArray(NOT_INTERESTED)
+        .mapNotNull { it.optString("channel").takeIf { c -> c.isNotBlank() } }
+        .groupingBy { it }.eachCount()
+
+    /** True for videos that should not be shown: blocked channel or marked not interested. */
+    fun isHidden(item: VideoItem): Boolean = hiddenFilter()(item)
+
+    /** A fast predicate for filtering long lists. */
+    @Synchronized
+    fun hiddenFilter(): (VideoItem) -> Boolean {
+        val blocked = readArray(BLOCKED).map { it.getString("url") }.toSet()
+        val notInterested = readArray(NOT_INTERESTED).map { it.getString("url") }.toSet()
+        return { it.url in notInterested || (it.uploaderUrl != null && it.uploaderUrl in blocked) }
+    }
+
+    // endregion
+
     // region Sync
 
     /** Everything that is synced between devices, as one JSON document. */
@@ -135,6 +258,12 @@ object Library {
         .put(REMOVED_FAVORITES, readTombstones(REMOVED_FAVORITES))
         .put(REMOVED_SUBSCRIPTIONS, readTombstones(REMOVED_SUBSCRIPTIONS))
         .put(HISTORY_CLEARED_AT, prefs.getLong(HISTORY_CLEARED_AT, 0))
+        .put(PLAYLISTS, JSONArray(readArray(PLAYLISTS)))
+        .put(REMOVED_PLAYLISTS, readTombstones(REMOVED_PLAYLISTS))
+        .put(BLOCKED, JSONArray(readArray(BLOCKED)))
+        .put(REMOVED_BLOCKED, readTombstones(REMOVED_BLOCKED))
+        .put(NOT_INTERESTED, JSONArray(readArray(NOT_INTERESTED)))
+        .put(REMOVED_NOT_INTERESTED, readTombstones(REMOVED_NOT_INTERESTED))
 
     /** Merges another device's [export] into this one. The newest change to each entry wins. */
     fun merge(remote: JSONObject) {
@@ -153,6 +282,9 @@ object Library {
 
             mergeSet(FAVORITES, REMOVED_FAVORITES, remote)
             mergeSet(SUBSCRIPTIONS, REMOVED_SUBSCRIPTIONS, remote)
+            mergeSet(PLAYLISTS, REMOVED_PLAYLISTS, remote)
+            mergeSet(BLOCKED, REMOVED_BLOCKED, remote)
+            mergeSet(NOT_INTERESTED, REMOVED_NOT_INTERESTED, remote)
 
             readArray(SUBSCRIPTIONS).map { it.getString("url") }.toSet() != before
         }
