@@ -2,6 +2,7 @@ package com.cartube
 
 import android.app.Application
 import com.cartube.data.Library
+import com.cartube.data.Sync
 import com.cartube.net.Http
 import com.cartube.net.OkHttpDownloader
 import org.schabi.newpipe.extractor.NewPipe
@@ -13,6 +14,7 @@ class CarTubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
+        Sync.init(this)
 
         val locale = Locale.getDefault()
         NewPipe.init(

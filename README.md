@@ -28,13 +28,20 @@ Android Auto visar bara appar från Play Butik om du inte slår på utvecklarlä
 3. Meny (⋮) → **Utvecklarinställningar** → slå på **Okända källor**.
 4. I Android Auto-inställningarna: **Anpassa startprogram** och se till att CarTube är ikryssad.
 
+## Synk mellan enheter
+
+Logga in med Google under **Bibliotek → Synka mellan enheter**. Kanaler, favoriter och historik
+sparas i en dold mapp på din egen Google Drive. Kräver en engångsinställning, se
+[docs/SETUP.md](docs/SETUP.md).
+
 ## Bygga
 
 Varje push byggs av GitHub Actions (`.github/workflows/build.yml`). Pushar till
 standardgrenen publicerar APK:n som releasen `latest`. Lokalt: `./gradlew assembleDebug`.
 
-APK:n signeras med en debug-nyckel som finns i repot (`app/debug.keystore`), så att nya
-versioner kan installeras ovanpå gamla.
+Publicerade APK:er signeras med en hemlig nyckel som bara finns i repots Secrets
+(se [docs/SETUP.md](docs/SETUP.md)). Nyckeln `app/debug.keystore` i repot är bara för
+utveckling och används aldrig för APK:er som delas ut.
 
 ## Licens
 

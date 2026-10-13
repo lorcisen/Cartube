@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.data.Sync
 import com.cartube.databinding.ActivityMainBinding
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -63,6 +64,11 @@ class MainActivity : AppCompatActivity() {
 
         askForNotificationPermission()
         if (savedInstanceState == null) handleShare(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Sync.syncInBackground()
     }
 
     override fun onNewIntent(intent: Intent) {

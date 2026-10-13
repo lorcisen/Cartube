@@ -11,8 +11,8 @@ android {
         applicationId = "com.cartube"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     buildFeatures {
@@ -20,19 +20,33 @@ android {
     }
 
     signingConfigs {
-        // A fixed key checked into the repo, so every CI build can be installed
-        // over the previous one without uninstalling first.
+        // Development key, checked in so local and pull-request builds work without secrets.
+        // Never use it for APKs given to people: anyone can read it in the public repo.
         getByName("debug") {
             storeFile = file("debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // The real key. CI writes it to release.keystore from the SIGNING_KEYSTORE_BASE64
+        // secret and passes the password in SIGNING_PASSWORD; it is never committed.
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = System.getenv("SIGNING_PASSWORD")
+            keyAlias = "cartube"
+            keyPassword = System.getenv("SIGNING_PASSWORD")
+        }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
+        }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName(
+                if (file("release.keystore").exists()) "release" else "debug",
+            )
         }
     }
 
@@ -77,6 +91,7 @@ dependencies {
     implementation("androidx.mediarouter:mediarouter:1.7.0")
 
     implementation("androidx.car.app:app:1.4.0")
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
@@ -91,4 +106,5 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 }
