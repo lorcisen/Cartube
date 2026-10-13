@@ -19,7 +19,6 @@ import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.feed.FeedInfo
-import org.schabi.newpipe.extractor.kiosk.KioskInfo
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
@@ -125,14 +124,32 @@ object YouTube {
      * "trending_movies_and_shows", "trending_podcasts_episodes", "live") for a country code.
      */
     suspend fun trending(kioskId: String, country: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        val direct = runCatching { kioskVideos(kioskId, country) }
+        val videos = direct.getOrNull().orEmpty()
+        if (videos.isNotEmpty() || kioskId != GENERAL_TRENDING) return@withContext direct.getOrThrow()
+
+        // YouTube retired its general trending page; build "general" from the category
+        // lists instead, taking turns so no single category dominates.
+        val lists = GENERAL_PARTS.map { id -> runCatching { kioskVideos(id, country) }.getOrDefault(emptyList()) }
+        if (lists.all { it.isEmpty() }) direct.getOrThrow()
+        val mixed = ArrayList<VideoItem>()
+        for (i in 0 until lists.maxOf { it.size }) lists.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
+        mixed.distinctBy { it.url }
+    }
+
+    /** Reads a kiosk's first page directly (its title parsing is what breaks most often). */
+    private fun kioskVideos(kioskId: String, country: String): List<VideoItem> {
         val extractor = service.kioskList.getExtractorById(kioskId, null)
         extractor.forceContentCountry(ContentCountry(country))
         extractor.fetchPage()
-        KioskInfo.getInfo(extractor).relatedItems
+        return extractor.initialPage.items
             .filterIsInstance<StreamInfoItem>()
             .filterNot { it.isShortFormContent }
             .map { it.toVideoItem() }
     }
+
+    private const val GENERAL_TRENDING = "Trending"
+    private val GENERAL_PARTS = listOf("trending_music", "trending_gaming", "trending_movies_and_shows", "trending_podcasts_episodes")
 
     /** Shorts from the given channels' Shorts tabs, newest first, mixed between channels. */
     suspend fun shorts(channels: List<Channel>, perChannel: Int = 8): List<VideoItem> = coroutineScope {
