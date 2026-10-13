@@ -23,6 +23,7 @@ import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import com.cartube.R
 import com.cartube.data.Feed
 import com.cartube.data.Library
+import com.cartube.data.Recommendations
 import com.cartube.ui.PlayerActivity
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -210,10 +211,14 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
             val children = when (parentId) {
                 ROOT -> listOf(
+                    folder(FOR_YOU, getString(R.string.nav_for_you)),
                     folder(FEED, getString(R.string.nav_home)),
                     folder(FAVORITES, getString(R.string.tab_favorites)),
                     folder(HISTORY, getString(R.string.tab_history)),
                 )
+                FOR_YOU -> runCatching { Recommendations.load().all }
+                    .getOrElse { Recommendations.current?.all.orEmpty() }
+                    .take(50).map { it.toMediaItem() }
                 FEED -> runCatching { Feed.load().videos }.getOrDefault(Feed.cached).map { it.toMediaItem() }
                 FAVORITES -> Library.favorites().map { it.toMediaItem() }
                 HISTORY -> Library.history().map { it.toMediaItem() }
@@ -227,7 +232,11 @@ class PlaybackService : MediaLibraryService() {
             browser: MediaSession.ControllerInfo,
             mediaId: String,
         ): ListenableFuture<LibraryResult<MediaItem>> {
-            val item = (Library.find(mediaId) ?: Feed.cached.firstOrNull { it.url == mediaId })
+            val item = (
+                Library.find(mediaId)
+                    ?: Feed.cached.firstOrNull { it.url == mediaId }
+                    ?: Recommendations.current?.all?.firstOrNull { it.url == mediaId }
+                )
                 ?.toMediaItem()
                 ?: return Futures.immediateFuture(LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE))
             return Futures.immediateFuture(LibraryResult.ofItem(item, null))
@@ -285,6 +294,7 @@ class PlaybackService : MediaLibraryService() {
     private companion object {
         const val TAG = "PlaybackService"
         const val ROOT = "root"
+        const val FOR_YOU = "for_you"
         const val FEED = "feed"
         const val FAVORITES = "favorites"
         const val HISTORY = "history"

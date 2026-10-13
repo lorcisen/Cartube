@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CarTube</string>
+    <string name="nav_for_you">Hem</string>
     <string name="nav_home">Prenumerationer</string>
+    <string name="all">Alla</string>
+    <string name="recommendations_empty">Titta på några videor så fylls Hem med förslag utifrån det du gillar.</string>
+    <string name="recommendations_failed">Kunde inte hämta förslag: %1$s</string>
     <string name="nav_search">Sök</string>
     <string name="nav_library">Bibliotek</string>
 

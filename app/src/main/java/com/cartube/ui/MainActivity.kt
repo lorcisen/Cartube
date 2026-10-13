@@ -49,28 +49,17 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
+                .add(R.id.content, ForYouFragment(), TAG_FOR_YOU)
                 .add(R.id.content, HomeFragment(), TAG_HOME)
                 .add(R.id.content, SearchFragment(), TAG_SEARCH)
                 .add(R.id.content, LibraryFragment(), TAG_LIBRARY)
                 .commitNow()
         }
         binding.bottomNav.setOnItemSelectedListener { item ->
-            show(
-                when (item.itemId) {
-                    R.id.nav_search -> TAG_SEARCH
-                    R.id.nav_library -> TAG_LIBRARY
-                    else -> TAG_HOME
-                },
-            )
+            show(tagFor(item.itemId))
             true
         }
-        show(
-            when (binding.bottomNav.selectedItemId) {
-                R.id.nav_search -> TAG_SEARCH
-                R.id.nav_library -> TAG_LIBRARY
-                else -> TAG_HOME
-            },
-        )
+        show(tagFor(binding.bottomNav.selectedItemId))
 
         askForNotificationPermission()
         if (savedInstanceState == null) handleShare(intent)
@@ -81,13 +70,24 @@ class MainActivity : AppCompatActivity() {
         handleShare(intent)
     }
 
+    private fun tagFor(itemId: Int) = when (itemId) {
+        R.id.nav_home -> TAG_HOME
+        R.id.nav_search -> TAG_SEARCH
+        R.id.nav_library -> TAG_LIBRARY
+        else -> TAG_FOR_YOU
+    }
+
     private fun show(tag: String) {
         val transaction = supportFragmentManager.beginTransaction()
-        for (tagged in listOf(TAG_HOME, TAG_SEARCH, TAG_LIBRARY)) {
+        for (tagged in listOf(TAG_FOR_YOU, TAG_HOME, TAG_SEARCH, TAG_LIBRARY)) {
             val fragment: Fragment = supportFragmentManager.findFragmentByTag(tagged) ?: continue
             if (tagged == tag) transaction.show(fragment) else transaction.hide(fragment)
         }
         transaction.commitNow()
+    }
+
+    fun showSearch() {
+        binding.bottomNav.selectedItemId = R.id.nav_search
     }
 
     fun showChannelSearch() {
@@ -170,6 +170,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private companion object {
+        const val TAG_FOR_YOU = "for_you"
         const val TAG_HOME = "home"
         const val TAG_SEARCH = "search"
         const val TAG_LIBRARY = "library"
