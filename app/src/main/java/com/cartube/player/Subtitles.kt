@@ -10,6 +10,11 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import androidx.media3.extractor.text.SubtitleExtractor
+import androidx.media3.extractor.text.SubtitleParser
+import androidx.media3.extractor.text.CuesWithTiming
+import androidx.media3.common.text.Cue
+import androidx.media3.common.util.Consumer
+import android.text.Layout
 import com.cartube.data.Settings
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.SubtitlesStream
@@ -97,8 +102,40 @@ object Subtitles {
             .setSelectionFlags(if (isDefault) C.SELECTION_FLAG_DEFAULT else 0)
             .build()
         // Parse while loading, the way ExoPlayer itself handles side-loaded subtitles.
-        val extractors = ExtractorsFactory { arrayOf(SubtitleExtractor(parserFactory.create(format), format)) }
+        val parser = CenteredParser(parserFactory.create(format))
+        val extractors = ExtractorsFactory { arrayOf(SubtitleExtractor(parser, format)) }
         return ProgressiveMediaSource.Factory(data, extractors)
             .createMediaSource(MediaItem.fromUri(vttUrl))
+    }
+
+    /**
+     * YouTube's caption files position each line for its own player (often flush left).
+     * Drop that so every line is centred at the bottom of the video.
+     */
+    private class CenteredParser(private val delegate: SubtitleParser) : SubtitleParser {
+        override fun parse(
+            data: ByteArray,
+            offset: Int,
+            length: Int,
+            outputOptions: SubtitleParser.OutputOptions,
+            output: Consumer<CuesWithTiming>,
+        ) {
+            delegate.parse(data, offset, length, outputOptions) { cues ->
+                output.accept(CuesWithTiming(cues.cues.map(::center), cues.startTimeUs, cues.durationUs))
+            }
+        }
+
+        override fun getCueReplacementBehavior(): Int = delegate.cueReplacementBehavior
+
+        override fun reset() = delegate.reset()
+
+        private fun center(cue: Cue): Cue = cue.buildUpon()
+            .setTextAlignment(Layout.Alignment.ALIGN_CENTER)
+            .setPosition(Cue.DIMEN_UNSET)
+            .setPositionAnchor(Cue.TYPE_UNSET)
+            .setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET)
+            .setLineAnchor(Cue.TYPE_UNSET)
+            .setSize(Cue.DIMEN_UNSET)
+            .build()
     }
 }
