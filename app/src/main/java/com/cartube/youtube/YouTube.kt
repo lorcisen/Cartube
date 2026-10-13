@@ -19,6 +19,7 @@ import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.feed.FeedInfo
+import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.search.SearchInfo
@@ -209,6 +210,9 @@ object YouTube {
         val subscribers: Long,
         val banner: String?,
         val videos: List<VideoItem>,
+        /** The channel's video tab and the page after [videos], for loading more on scroll. */
+        val videosTab: ListLinkHandler? = null,
+        val nextPage: Page? = null,
     )
 
     class FeedResult(
@@ -264,19 +268,29 @@ object YouTube {
         val info = ChannelInfo.getInfo(service, url)
         val channel = Channel(info.url, info.name, VideoItem.bestImage(info.avatars, 240))
         val videosTab = info.tabs.firstOrNull { ChannelTabs.VIDEOS in it.contentFilters }
-        val videos = videosTab?.let { tab ->
-            ChannelTabInfo.getInfo(service, tab).relatedItems
-                .filterIsInstance<StreamInfoItem>()
-                .map {
-                    it.toVideoItem().copy(
-                        uploader = it.uploaderName?.takeIf { name -> name.isNotBlank() } ?: channel.name,
-                        uploaderUrl = it.uploaderUrl ?: channel.url,
-                        uploaderAvatar = channel.avatar,
-                    )
-                }
-        }.orEmpty()
-        return ChannelPage(channel, info.subscriberCount, VideoItem.bestImage(info.banners, 1280), videos)
+        val tabInfo = videosTab?.let { ChannelTabInfo.getInfo(service, it) }
+        val videos = tabInfo?.relatedItems.orEmpty().toChannelVideos(channel)
+        return ChannelPage(
+            channel, info.subscriberCount, VideoItem.bestImage(info.banners, 1280), videos,
+            videosTab, tabInfo?.nextPage?.takeIf { tabInfo.hasNextPage() },
+        )
     }
+
+    /** The next page of a channel's videos, and the page after it (null at the end). */
+    suspend fun channelMore(tab: ListLinkHandler, page: Page, channel: Channel): Pair<List<VideoItem>, Page?> =
+        withContext(Dispatchers.IO) {
+            val more = ChannelTabInfo.getMoreItems(service, tab, page)
+            more.items.toChannelVideos(channel) to more.nextPage?.takeIf { more.hasNextPage() }
+        }
+
+    private fun List<InfoItem>.toChannelVideos(channel: Channel): List<VideoItem> =
+        filterIsInstance<StreamInfoItem>().map {
+            it.toVideoItem().copy(
+                uploader = it.uploaderName?.takeIf { name -> name.isNotBlank() } ?: channel.name,
+                uploaderUrl = it.uploaderUrl ?: channel.url,
+                uploaderAvatar = channel.avatar,
+            )
+        }
 
     /** Reads a Google Takeout export (zip, csv or json) of YouTube subscriptions. */
     suspend fun importSubscriptions(input: InputStream, type: String): List<Channel> =

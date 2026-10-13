@@ -6,6 +6,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -20,6 +22,8 @@ import com.cartube.databinding.ChannelHeaderBinding
 import com.cartube.youtube.Channel
 import com.cartube.youtube.YouTube
 import kotlinx.coroutines.launch
+import org.schabi.newpipe.extractor.Page
+import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler
 
 class ChannelActivity : AppCompatActivity() {
 
@@ -32,6 +36,9 @@ class ChannelActivity : AppCompatActivity() {
     private val videos = VideoAdapter(showUploader = false) { openVideo(it) }
     private var allVideos: List<com.cartube.youtube.VideoItem> = emptyList()
     private var sort = VideoSort.NEWEST
+    private var videosTab: ListLinkHandler? = null
+    private var nextPage: Page? = null
+    private var loadingMore = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -55,6 +62,11 @@ class ChannelActivity : AppCompatActivity() {
         }
         binding.list.adapter = ConcatAdapter(header, videos)
         binding.list.useGrid { it == 0 }
+        binding.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy > 0) loadMoreIfNearEnd()
+            }
+        })
         load()
     }
 
@@ -71,10 +83,39 @@ class ChannelActivity : AppCompatActivity() {
                 binding.toolbar.title = channel.name
                 header.notifyItemChanged(0)
                 allVideos = page.videos
-                videos.submitList(sort.apply(allVideos))
+                videosTab = page.videosTab
+                nextPage = page.nextPage
+                videos.submitList(sort.apply(allVideos)) { loadMoreIfNearEnd() }
             }.onFailure {
                 binding.error.isVisible = true
                 binding.error.text = getString(R.string.channel_failed, describeError(it))
+            }
+        }
+    }
+
+    /** Fetches the channel's next page of videos once the list is scrolled close to its end. */
+    private fun loadMoreIfNearEnd() {
+        val tab = videosTab ?: return
+        val page = nextPage ?: return
+        if (loadingMore) return
+        val lm = binding.list.layoutManager as? LinearLayoutManager ?: return
+        if (lm.findLastVisibleItemPosition() < lm.itemCount - 8) return
+        loadingMore = true
+        binding.progress.isVisible = true
+        lifecycleScope.launch {
+            val result = runCatching { YouTube.channelMore(tab, page, channel) }
+            binding.progress.isVisible = false
+            result.onSuccess { (more, next) ->
+                val known = allVideos.mapTo(HashSet()) { it.url }
+                allVideos = allVideos + more.filter { it.url !in known }
+                nextPage = next
+                videos.submitList(sort.apply(allVideos)) {
+                    loadingMore = false
+                    loadMoreIfNearEnd()
+                }
+            }.onFailure {
+                loadingMore = false
+                Toast.makeText(this@ChannelActivity, describeError(it), Toast.LENGTH_SHORT).show()
             }
         }
     }
