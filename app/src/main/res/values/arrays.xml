@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="quality_labels">
+        <item>2160p (4K)</item>
+        <item>1440p</item>
+        <item>1080p</item>
+        <item>720p</item>
+        <item>480p</item>
+        <item>360p</item>
+    </string-array>
+    <string-array name="quality_values">
+        <item>2160</item>
+        <item>1440</item>
+        <item>1080</item>
+        <item>720</item>
+        <item>480</item>
+        <item>360</item>
+    </string-array>
+    <string-array name="speed_labels">
+        <item>0,75×</item>
+        <item>Normal</item>
+        <item>1,25×</item>
+        <item>1,5×</item>
+        <item>1,75×</item>
+        <item>2×</item>
+    </string-array>
+    <string-array name="speed_values">
+        <item>0.75</item>
+        <item>1.0</item>
+        <item>1.25</item>
+        <item>1.5</item>
+        <item>1.75</item>
+        <item>2.0</item>
+    </string-array>
+    <string-array name="theme_labels">
+        <item>Följ systemet</item>
+        <item>Ljust</item>
+        <item>Mörkt</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+    <string-array name="sponsor_labels">
+        <item>Sponsorer</item>
+        <item>Egenreklam</item>
+        <item>Påminnelser om att gilla och prenumerera</item>
+        <item>Intro och väntan</item>
+        <item>Eftertexter och slutskärmar</item>
+        <item>Förhandsvisningar och sammanfattningar</item>
+        <item>Icke-musik i musikvideor</item>
+        <item>Utfyllnad och sidospår</item>
+    </string-array>
+    <string-array name="sponsor_values">
+        <item>sponsor</item>
+        <item>selfpromo</item>
+        <item>interaction</item>
+        <item>intro</item>
+        <item>outro</item>
+        <item>preview</item>
+        <item>music_offtopic</item>
+        <item>filler</item>
+    </string-array>
+    <string-array name="sponsor_defaults">
+        <item>sponsor</item>
+        <item>selfpromo</item>
+        <item>interaction</item>
+    </string-array>
+</resources>

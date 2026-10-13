@@ -71,4 +71,54 @@
     <string name="cast">Casta</string>
     <string name="up_next">Fler videor</string>
     <string name="car_audio_only">Ansluten till bilen – endast ljud.\nStyr uppspelningen från bilens skärm.</string>
+
+    <!-- Premium features -->
+    <string name="settings">Inställningar</string>
+    <string name="play_pause">Spela/pausa</string>
+    <string name="close">Stäng</string>
+    <string name="quality">Kvalitet</string>
+    <string name="quality_unavailable">Kvaliteten kan inte väljas för den här videon.</string>
+    <string name="sleep_timer">Sovtimer</string>
+    <string name="sleep_off">Av</string>
+    <string name="minutes">%1$d minuter</string>
+    <string name="sleep_set">Pausar om %1$d minuter</string>
+    <string name="sleep_cancelled">Sovtimern är avstängd</string>
+    <string name="likes">%1$s gillar</string>
+    <string name="dislikes">%1$s ogillar</string>
+    <string name="gesture_forward">+10 s</string>
+    <string name="gesture_back">−10 s</string>
+    <string name="gesture_brightness">Ljusstyrka %1$d %%</string>
+    <string name="gesture_volume">Volym %1$d %%</string>
+    <string name="skipped_segment">Hoppade över: %1$s</string>
+    <string name="sb_sponsor">sponsor</string>
+    <string name="sb_selfpromo">egenreklam</string>
+    <string name="sb_interaction">påminnelse om att prenumerera</string>
+    <string name="sb_intro">intro</string>
+    <string name="sb_outro">eftertexter</string>
+    <string name="sb_preview">förhandsvisning</string>
+    <string name="sb_music_offtopic">icke-musik</string>
+    <string name="sb_filler">utfyllnad</string>
+
+    <string name="pref_playback">Uppspelning</string>
+    <string name="pref_quality_wifi">Kvalitet på wifi</string>
+    <string name="pref_quality_mobile">Kvalitet på mobildata</string>
+    <string name="pref_speed">Standardhastighet</string>
+    <string name="pref_autoplay">Autoplay</string>
+    <string name="pref_autoplay_summary">Spela nästa rekommenderade video när en video tar slut</string>
+    <string name="pref_gestures">Gester i spelaren</string>
+    <string name="pref_gestures_summary">Dubbeltryck för att spola ±10 s, svep för ljusstyrka (vänster) och volym (höger)</string>
+    <string name="pref_sponsorblock">SponsorBlock</string>
+    <string name="pref_sponsorblock_enabled">Hoppa över segment</string>
+    <string name="pref_sponsorblock_summary">Hoppar automatiskt över delar som andra tittare har markerat</string>
+    <string name="pref_sponsorblock_categories">Vad ska hoppas över</string>
+    <string name="pref_dislikes">Visa ogillanden</string>
+    <string name="pref_dislikes_summary">Från Return YouTube Dislike</string>
+    <string name="pref_appearance">Utseende</string>
+    <string name="pref_theme">Tema</string>
+    <string name="pref_amoled">AMOLED-svart</string>
+    <string name="pref_amoled_summary">Helt svart bakgrund i mörkt läge, sparar batteri</string>
+    <string name="pref_dynamic_color">Material You-färger</string>
+    <string name="pref_dynamic_color_summary">Använd färgerna från din bakgrundsbild (startar om appen)</string>
+    <string name="pref_about">Om</string>
+    <string name="pref_version">Version</string>
 </resources>

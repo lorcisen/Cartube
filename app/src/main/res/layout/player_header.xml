@@ -23,6 +23,16 @@
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
+    <TextView
+        android:id="@+id/votes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:paddingHorizontal="16dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/channelRow"
         android:layout_width="match_parent"
@@ -105,6 +115,22 @@
                 android:layout_height="wrap_content"
                 android:text="@string/fullscreen"
                 app:icon="@drawable/ic_fullscreen" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/quality"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/quality"
+                app:icon="@drawable/ic_quality" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sleepTimer"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sleep_timer"
+                app:icon="@drawable/ic_timer" />
         </LinearLayout>
     </HorizontalScrollView>
 

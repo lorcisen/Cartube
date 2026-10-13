@@ -32,6 +32,7 @@ class ChannelActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        applyAmoledIfEnabled()
         binding = ActivityChannelBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.padForSystemBars()

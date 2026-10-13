@@ -37,7 +37,15 @@ import com.cartube.R
 import com.cartube.data.Library
 import com.cartube.databinding.ActivityPlayerBinding
 import com.cartube.databinding.PlayerHeaderBinding
+import com.cartube.data.Settings
+import com.cartube.net.Dislikes
 import com.cartube.player.PlaybackService
+import com.cartube.player.YoutubeMediaSourceFactory
+import com.cartube.youtube.StreamCache
+import com.cartube.youtube.videoIdOf
+import androidx.core.os.bundleOf
+import androidx.media3.session.SessionCommand
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.cartube.youtube.Channel
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -60,6 +68,7 @@ class PlayerActivity : AppCompatActivity() {
     private var shown: VideoItem? = null
     private var subscribers = -1L
     private var description: CharSequence? = null
+    private var votes: String? = null
     private var descriptionExpanded = false
     private var detailsJob: Job? = null
 
@@ -118,6 +127,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        applyAmoledIfEnabled()
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.padForSystemBars()
@@ -125,6 +135,7 @@ class PlayerActivity : AppCompatActivity() {
 
         binding.details.adapter = ConcatAdapter(header, related)
         binding.playerView.setFullscreenButtonClickListener { setFullscreen(it) }
+        PlayerGestures(this, binding.playerView, binding.gestureIndicator) { controller }.attach()
         runCatching { CastButtonFactory.setUpMediaRouteButton(applicationContext, binding.castButton) }
 
         if (savedInstanceState == null) pendingItem = VideoItem.fromIntent(intent)
@@ -225,6 +236,7 @@ class PlayerActivity : AppCompatActivity() {
         if (!sameVideo) {
             subscribers = -1
             description = null
+            votes = null
             descriptionExpanded = false
             related.submitList(emptyList())
         }
@@ -240,7 +252,64 @@ class PlayerActivity : AppCompatActivity() {
             description = info.description?.let { renderDescription(it) }
             header.notifyItemChanged(0)
             related.submitList(YouTube.related(info))
+
+            val id = videoIdOf(info.url)
+            val fetched = if (Settings.showDislikes && id != null) Dislikes.votes(id) else null
+            if (shown?.url != info.url) return@launch
+            val likes = info.likeCount.takeIf { it >= 0 } ?: fetched?.likes?.takeIf { it >= 0 }
+            val dislikes = fetched?.dislikes?.takeIf { it >= 0 }
+            votes = listOfNotNull(
+                likes?.let { getString(R.string.likes, formatCount(it)) },
+                dislikes?.let { getString(R.string.dislikes, formatCount(it)) },
+            ).joinToString("   ").ifBlank { null }
+            header.notifyItemChanged(0)
         }
+    }
+
+    private fun pickQuality() {
+        val item = shown ?: return
+        val info = StreamCache.get(item.url)
+        val heights = info?.let { YoutubeMediaSourceFactory.availableHeights(it) }.orEmpty()
+        if (heights.isEmpty()) {
+            Toast.makeText(this, R.string.quality_unavailable, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val current = Settings.maxHeightFor(item.url)
+        val selected = heights.indexOfFirst { it <= current }.coerceAtLeast(0)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.quality)
+            .setSingleChoiceItems(heights.map { "${it}p" }.toTypedArray(), selected) { dialog, which ->
+                dialog.dismiss()
+                Settings.overrideQuality(item.url, heights[which])
+                val c = controller ?: return@setSingleChoiceItems
+                val position = c.currentPosition
+                val playing = c.playWhenReady
+                c.setMediaItem(item.toMediaItem(), position)
+                c.prepare()
+                c.playWhenReady = playing
+            }
+            .show()
+    }
+
+    private fun pickSleepTimer() {
+        val minutes = intArrayOf(0, 15, 30, 45, 60, 90)
+        val labels = minutes.map { if (it == 0) getString(R.string.sleep_off) else getString(R.string.minutes, it) }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.sleep_timer)
+            .setItems(labels.toTypedArray()) { _, which ->
+                val c = controller ?: return@setItems
+                c.sendCustomCommand(
+                    SessionCommand(PlaybackService.SLEEP_TIMER, Bundle.EMPTY),
+                    bundleOf(PlaybackService.EXTRA_MINUTES to minutes[which]),
+                )
+                val message = if (minutes[which] == 0) {
+                    getString(R.string.sleep_cancelled)
+                } else {
+                    getString(R.string.sleep_set, minutes[which])
+                }
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun renderDescription(description: Description): CharSequence? {
@@ -321,6 +390,10 @@ class PlayerActivity : AppCompatActivity() {
                 ).show()
             }
             b.share.setOnClickListener { shareVideo(item) }
+            b.quality.setOnClickListener { pickQuality() }
+            b.sleepTimer.setOnClickListener { pickSleepTimer() }
+            b.votes.isVisible = votes != null
+            b.votes.text = votes
             b.fullscreen.setOnClickListener { setFullscreen(true) }
 
             val channelUrl = item.uploaderUrl

@@ -20,10 +20,14 @@ import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import android.os.Bundle
 import com.cartube.R
 import com.cartube.data.Feed
 import com.cartube.data.Library
 import com.cartube.data.Recommendations
+import com.cartube.data.Settings
 import com.cartube.ui.PlayerActivity
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -61,6 +65,23 @@ class PlaybackService : MediaLibraryService() {
 
     private val isCasting get() = castPlayer != null && session?.player === castPlayer
 
+    private lateinit var skipper: SegmentSkipper
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val sleep = Runnable { session?.player?.pause() }
+    private var autoplayJob: kotlinx.coroutines.Job? = null
+
+    private val playerListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                session?.player?.setPlaybackSpeed(Settings.defaultSpeed)
+            }
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) playNextRelated()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         exoPlayer = ExoPlayer.Builder(this)
@@ -90,6 +111,10 @@ class PlaybackService : MediaLibraryService() {
         carConnection = CarConnection(this).type
         carConnection.observeForever(carObserver)
 
+        skipper = SegmentSkipper(this, scope)
+        skipper.attach(exoPlayer)
+        exoPlayer.addListener(playerListener)
+
         castPlayer = runCatching { CastPlayer(CastContext.getSharedInstance(this)) }
             .onFailure { Log.w(TAG, "Cast is not available", it) }
             .getOrNull()
@@ -111,6 +136,8 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         carConnection.removeObserver(carObserver)
+        handler.removeCallbacks(sleep)
+        skipper.release()
         scope.cancel()
         castPlayer?.run {
             setSessionAvailabilityListener(null)
@@ -152,6 +179,33 @@ class PlaybackService : MediaLibraryService() {
             target.prepare()
         }
         session.player = target
+        from.removeListener(playerListener)
+        target.addListener(playerListener)
+        skipper.attach(target)
+    }
+
+    /** With autoplay on, queues the top related video the user has not seen when one ends. */
+    private fun playNextRelated() {
+        val player = session?.player ?: return
+        if (!Settings.autoplay || player.hasNextMediaItem() || autoplayJob?.isActive == true) return
+        val current = player.currentMediaItem?.mediaId ?: return
+        autoplayJob = scope.launch {
+            val info = runCatching { YouTube.streamInfo(current) }.getOrNull() ?: return@launch
+            val watched = Library.history().map { it.url }.toSet()
+            val next = YouTube.related(info).firstOrNull { it.url !in watched } ?: return@launch
+            val item = resolve(next.toMediaItem()) ?: return@launch
+            val p = session?.player ?: return@launch
+            if (p.playbackState != Player.STATE_ENDED) return@launch
+            p.addMediaItem(item)
+            p.seekToNextMediaItem()
+            p.prepare()
+            p.play()
+        }
+    }
+
+    private fun setSleepTimer(minutes: Int) {
+        handler.removeCallbacks(sleep)
+        if (minutes > 0) handler.postDelayed(sleep, minutes * 60_000L)
     }
 
     /** Fetches stream URLs for an item; also handles voice requests ("play X"). */
@@ -193,6 +247,31 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private inner class LibraryCallback : MediaLibrarySession.Callback {
+
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): MediaSession.ConnectionResult {
+            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                .add(SessionCommand(SLEEP_TIMER, Bundle.EMPTY))
+                .build()
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(commands)
+                .build()
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == SLEEP_TIMER) {
+                setSleepTimer(args.getInt(EXTRA_MINUTES))
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+        }
 
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
@@ -291,12 +370,14 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private companion object {
-        const val TAG = "PlaybackService"
-        const val ROOT = "root"
-        const val FOR_YOU = "for_you"
-        const val FEED = "feed"
-        const val FAVORITES = "favorites"
-        const val HISTORY = "history"
+    companion object {
+        const val SLEEP_TIMER = "com.cartube.SLEEP_TIMER"
+        const val EXTRA_MINUTES = "minutes"
+        private const val TAG = "PlaybackService"
+        private const val ROOT = "root"
+        private const val FOR_YOU = "for_you"
+        private const val FEED = "feed"
+        private const val FAVORITES = "favorites"
+        private const val HISTORY = "history"
     }
 }

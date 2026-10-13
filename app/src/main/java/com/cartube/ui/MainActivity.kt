@@ -16,7 +16,16 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.data.Settings
 import com.cartube.data.Sync
+import android.content.ComponentName
+import androidx.core.view.isVisible
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import coil.load
+import com.cartube.player.PlaybackService
+import com.google.common.util.concurrent.ListenableFuture
 import com.cartube.databinding.ActivityMainBinding
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -39,6 +48,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        applyAmoledIfEnabled()
+        createdWithAmoled = Settings.amoled
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.padForSystemBars()
@@ -47,6 +58,15 @@ class MainActivity : AppCompatActivity() {
         runCatching {
             CastButtonFactory.setUpMediaRouteButton(applicationContext, binding.toolbar.menu, R.id.cast)
         }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.settings) {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            } else {
+                false
+            }
+        }
+        setUpMiniPlayer()
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
@@ -69,7 +89,92 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         Sync.syncInBackground()
+        connectMiniPlayer()
     }
+
+    override fun onResume() {
+        super.onResume()
+        if (createdWithAmoled != Settings.amoled) recreate()
+    }
+
+    override fun onStop() {
+        disconnectMiniPlayer()
+        super.onStop()
+    }
+
+    // region Mini player
+
+    private var createdWithAmoled = false
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var controller: MediaController? = null
+    private val progressTick = object : Runnable {
+        override fun run() {
+            val c = controller ?: return
+            val duration = c.duration
+            binding.miniProgress.progress =
+                if (duration > 0) (c.currentPosition * 1000 / duration).toInt() else 0
+            binding.miniProgress.postDelayed(this, 1000)
+        }
+    }
+
+    private val miniListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) = updateMiniPlayer()
+    }
+
+    private fun setUpMiniPlayer() {
+        binding.miniProgress.max = 1000
+        binding.miniPlayer.setOnClickListener {
+            startActivity(Intent(this, PlayerActivity::class.java))
+        }
+        binding.miniPlayPause.setOnClickListener {
+            val c = controller ?: return@setOnClickListener
+            if (c.isPlaying) c.pause() else c.play()
+        }
+        binding.miniClose.setOnClickListener {
+            controller?.run {
+                stop()
+                clearMediaItems()
+            }
+        }
+    }
+
+    private fun connectMiniPlayer() {
+        val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
+        val future = MediaController.Builder(this, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            val ready = runCatching { future.get() }.getOrNull() ?: return@addListener
+            controller = ready
+            ready.addListener(miniListener)
+            updateMiniPlayer()
+            binding.miniProgress.post(progressTick)
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun disconnectMiniPlayer() {
+        binding.miniProgress.removeCallbacks(progressTick)
+        controller?.removeListener(miniListener)
+        controller = null
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controllerFuture = null
+    }
+
+    private fun updateMiniPlayer() {
+        val c = controller
+        val item = c?.currentMediaItem
+        if (c == null || item == null || c.playbackState == Player.STATE_IDLE) {
+            binding.miniPlayer.isVisible = false
+            return
+        }
+        binding.miniPlayer.isVisible = true
+        val video = VideoItem.fromMediaItem(item)
+        binding.miniTitle.text = video.title
+        binding.miniUploader.text = video.uploader
+        binding.miniThumbnail.load(video.thumbnail)
+        binding.miniPlayPause.setImageResource(if (c.isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
+    }
+
+    // endregion
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

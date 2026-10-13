@@ -2,6 +2,8 @@ package com.cartube
 
 import android.app.Application
 import com.cartube.data.Library
+import com.cartube.data.Settings
+import com.google.android.material.color.DynamicColors
 import com.cartube.data.Sync
 import com.cartube.net.Http
 import com.cartube.net.OkHttpDownloader
@@ -13,6 +15,8 @@ import java.util.Locale
 class CarTubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        Settings.init(this)
+        if (Settings.dynamicColor) DynamicColors.applyToActivitiesIfAvailable(this)
         Library.init(this)
         Sync.init(this)
 

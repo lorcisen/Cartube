@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.cartube.net.Http
+import com.cartube.data.Settings
 import com.cartube.youtube.StreamCache
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator
@@ -77,7 +78,7 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
         }
 
         val audio = pickAudio(info.audioStreams)?.let { youtubeSource(it, info, item) }
-        val video = pickVideo(info.videoOnlyStreams)?.let { youtubeSource(it, info, item) }
+        val video = pickVideo(info.videoOnlyStreams, Settings.maxHeightFor(item.mediaId))?.let { youtubeSource(it, info, item) }
         if (audio != null && video != null) return MergingMediaSource(true, video, audio)
 
         // Older uploads sometimes only have streams with sound and picture muxed together.
@@ -125,8 +126,8 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
         (stream.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP ||
             (stream.deliveryMethod == DeliveryMethod.DASH && stream.itagItem != null))
 
-    private fun pickVideo(streams: List<VideoStream>): VideoStream? = streams
-        .filter { usable(it) && it.height in 1..MAX_HEIGHT }
+    private fun pickVideo(streams: List<VideoStream>, maxHeight: Int): VideoStream? = streams
+        .filter { usable(it) && it.height in 1..maxHeight }
         .sortedWith(
             compareByDescending<VideoStream> { it.height }
                 .thenByDescending { it.fps }
@@ -145,8 +146,19 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
         )
         .firstOrNull()
 
-    private companion object {
-        const val TAG = "YoutubeSourceFactory"
-        const val MAX_HEIGHT = 1080
+    companion object {
+        /** Video heights a player can switch between for this video, highest first. */
+        fun availableHeights(info: StreamInfo): List<Int> = info.videoOnlyStreams
+            .filter {
+                it.isUrl && it.height > 0 && (
+                    it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP ||
+                        (it.deliveryMethod == DeliveryMethod.DASH && it.itagItem != null)
+                    )
+            }
+            .map { it.height }
+            .distinct()
+            .sortedDescending()
+
+        private const val TAG = "YoutubeSourceFactory"
     }
 }

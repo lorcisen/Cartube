@@ -67,6 +67,10 @@
             android:theme="@style/Theme.CarTube.Player" />
 
         <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.ChannelActivity"
             android:exported="false" />
 

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/pref_playback">
+        <ListPreference
+            app:defaultValue="1080"
+            app:entries="@array/quality_labels"
+            app:entryValues="@array/quality_values"
+            app:key="quality_wifi"
+            app:title="@string/pref_quality_wifi"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:defaultValue="480"
+            app:entries="@array/quality_labels"
+            app:entryValues="@array/quality_values"
+            app:key="quality_mobile"
+            app:title="@string/pref_quality_mobile"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:defaultValue="1.0"
+            app:entries="@array/speed_labels"
+            app:entryValues="@array/speed_values"
+            app:key="default_speed"
+            app:title="@string/pref_speed"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="autoplay"
+            app:summary="@string/pref_autoplay_summary"
+            app:title="@string/pref_autoplay" />
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="gestures"
+            app:summary="@string/pref_gestures_summary"
+            app:title="@string/pref_gestures" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_sponsorblock">
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="sponsorblock"
+            app:summary="@string/pref_sponsorblock_summary"
+            app:title="@string/pref_sponsorblock_enabled" />
+        <MultiSelectListPreference
+            app:defaultValue="@array/sponsor_defaults"
+            app:dependency="sponsorblock"
+            app:entries="@array/sponsor_labels"
+            app:entryValues="@array/sponsor_values"
+            app:key="sponsorblock_categories"
+            app:title="@string/pref_sponsorblock_categories" />
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="show_dislikes"
+            app:summary="@string/pref_dislikes_summary"
+            app:title="@string/pref_dislikes" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_appearance">
+        <ListPreference
+            app:defaultValue="system"
+            app:entries="@array/theme_labels"
+            app:entryValues="@array/theme_values"
+            app:key="theme"
+            app:title="@string/pref_theme"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="amoled"
+            app:summary="@string/pref_amoled_summary"
+            app:title="@string/pref_amoled" />
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="dynamic_color"
+            app:summary="@string/pref_dynamic_color_summary"
+            app:title="@string/pref_dynamic_color" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_about">
+        <Preference
+            app:key="version"
+            app:selectable="false"
+            app:title="@string/pref_version" />
+    </PreferenceCategory>
+</PreferenceScreen>
