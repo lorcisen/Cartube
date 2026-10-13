@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.cartube.R
 import com.cartube.data.Feed
 import com.cartube.data.Library
+import com.cartube.data.VideoSort
 import com.cartube.databinding.FragmentHomeBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -17,6 +18,10 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private var binding: FragmentHomeBinding? = null
     private var loadJob: Job? = null
+    private var sort = VideoSort.NEWEST
+    private var feed: List<com.cartube.youtube.VideoItem> = emptyList()
+
+    private fun showFeed() = adapter.submitList(sort.apply(feed))
     private val adapter = VideoAdapter(
         onChannelClick = { requireContext().openChannelOf(it) },
         onClick = { requireContext().openVideo(it) },
@@ -31,11 +36,20 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         binding = b
         b.list.adapter = adapter
         b.list.useGrid()
+        b.sortButton.bindChoice(
+            listOf(VideoSort.NEWEST, VideoSort.MOST_VIEWED, VideoSort.LONGEST, VideoSort.SHORTEST, VideoSort.CHANNEL),
+            { sort }, { getString(it.label) }, getString(R.string.sort),
+        ) {
+            sort = it
+            showFeed()
+            b.list.scrollToPosition(0)
+        }
         b.refresh.setOnRefreshListener { load(force = true) }
         b.importButton.setOnClickListener { (activity as? MainActivity)?.startImport() }
         b.findChannelsButton.setOnClickListener { (activity as? MainActivity)?.showChannelSearch() }
         Library.addSubscriptionListener(subscriptionsChanged)
-        adapter.submitList(Feed.cached)
+        feed = Feed.cached
+        showFeed()
         load(force = false)
     }
 
@@ -52,7 +66,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val b = binding ?: return
         val hasSubscriptions = Library.subscriptions().isNotEmpty()
         b.emptyState.isVisible = !hasSubscriptions
-        b.refresh.isVisible = hasSubscriptions
+        b.feedContainer.isVisible = hasSubscriptions
         b.error.isVisible = false
         if (!hasSubscriptions) {
             adapter.submitList(emptyList())
@@ -65,7 +79,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val current = binding ?: return@launch
             current.refresh.isRefreshing = false
             result.onSuccess { feed ->
-                adapter.submitList(feed.videos)
+                this@HomeFragment.feed = feed.videos
+                showFeed()
                 val message = when {
                     feed.videos.isEmpty() && feed.failed > 0 ->
                         getString(R.string.feed_failed, describe(feed.firstError))

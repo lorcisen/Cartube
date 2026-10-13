@@ -101,6 +101,14 @@
     </HorizontalScrollView>
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/sortButton"
+        style="@style/CarTube.SortButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:visibility="gone" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/importButton"
         style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="wrap_content"

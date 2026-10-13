@@ -75,6 +75,13 @@
         <item name="drawableTint">?attr/colorOnSurface</item>
     </style>
 
+    <style name="CarTube.SortButton" parent="Widget.Material3.Button.TextButton">
+        <item name="icon">@drawable/ic_expand</item>
+        <item name="iconGravity">end</item>
+        <item name="iconSize">18dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
     <style name="ShapeRounded12" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">12dp</item>

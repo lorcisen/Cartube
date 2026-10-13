@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.data.VideoSort
 import com.cartube.databinding.ActivityPlaylistBinding
 import com.cartube.player.PlayQueue
 import com.cartube.youtube.VideoItem
@@ -24,6 +25,7 @@ class PlaylistActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPlaylistBinding
     private var videos: List<VideoItem> = emptyList()
     private var name = ""
+    private var sort = VideoSort.ORIGINAL
     private val localId get() = intent.getStringExtra(EXTRA_LOCAL_ID)
     private val remoteUrl get() = intent.getStringExtra(EXTRA_URL)
 
@@ -52,6 +54,17 @@ class PlaylistActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.playlist_saved, Toast.LENGTH_SHORT).show()
         }
         binding.toolbar.inflateMenu(R.menu.playlist)
+        binding.toolbar.menu.findItem(R.id.sort).setOnMenuItemClickListener {
+            pickSort(
+                listOf(VideoSort.ORIGINAL, VideoSort.NEWEST, VideoSort.OLDEST, VideoSort.MOST_VIEWED, VideoSort.TITLE, VideoSort.LONGEST, VideoSort.SHORTEST),
+                sort,
+                { getString(if (it == VideoSort.ORIGINAL) R.string.sort_playlist_order else it.label) },
+            ) {
+                sort = it
+                adapter.submitList(sort.apply(videos))
+            }
+            true
+        }
         binding.toolbar.menu.findItem(R.id.rename).isVisible = localId != null
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -117,14 +130,14 @@ class PlaylistActivity : AppCompatActivity() {
         binding.meta.text = listOfNotNull(uploader.takeIf { it.isNotBlank() }, getString(R.string.videos_count, items.size))
             .joinToString(" · ")
         binding.cover.load(thumbnail)
-        adapter.submitList(items)
+        adapter.submitList(sort.apply(items))
         binding.empty.isVisible = items.isEmpty()
     }
 
     /** Plays from [startAt] (or the start); the rest of the playlist goes into the queue. */
     private fun play(shuffle: Boolean = false, startAt: VideoItem? = null) {
         if (videos.isEmpty()) return
-        val order = if (shuffle) videos.shuffled() else videos
+        val order = if (shuffle) videos.shuffled() else sort.apply(videos)
         val start = startAt?.let { order.indexOf(it) }?.takeIf { it >= 0 } ?: 0
         PlayQueue.replace(order.drop(start + 1))
         openVideo(order[start])

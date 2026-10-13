@@ -28,11 +28,26 @@ import java.io.InputStream
 object YouTube {
     private val service get() = ServiceList.YouTube
 
-    suspend fun search(query: String): List<VideoItem> = withContext(Dispatchers.IO) {
-        searchInfo(query, YoutubeSearchQueryHandlerFactory.VIDEOS)
-            .filterIsInstance<StreamInfoItem>()
+    /**
+     * Video search. YouTube's own order is relevance; more [pages] give a bigger pool to
+     * sort and filter locally (about 20 videos per page).
+     */
+    suspend fun search(query: String, pages: Int = 1): List<VideoItem> = withContext(Dispatchers.IO) {
+        val handler = service.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
+        val first = SearchInfo.getInfo(service, handler)
+        val items = first.relatedItems.toMutableList()
+        var next = first.nextPage
+        var fetched = 1
+        while (fetched < pages && next != null) {
+            val more = runCatching { SearchInfo.getMoreItems(service, handler, next) }.getOrNull() ?: break
+            items += more.items
+            next = more.nextPage
+            fetched++
+        }
+        items.filterIsInstance<StreamInfoItem>()
             .filterNot { it.isShortFormContent }
             .map { it.toVideoItem() }
+            .distinctBy { it.url }
     }
 
     suspend fun searchChannels(query: String): List<Channel> = withContext(Dispatchers.IO) {

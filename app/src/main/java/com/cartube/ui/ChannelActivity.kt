@@ -13,6 +13,7 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.data.VideoSort
 import com.cartube.databinding.ActivityChannelBinding
 import com.cartube.databinding.ChannelHeaderBinding
 import com.cartube.youtube.Channel
@@ -28,6 +29,8 @@ class ChannelActivity : AppCompatActivity() {
 
     private val header = HeaderAdapter()
     private val videos = VideoAdapter(showUploader = false) { openVideo(it) }
+    private var allVideos: List<com.cartube.youtube.VideoItem> = emptyList()
+    private var sort = VideoSort.NEWEST
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -40,6 +43,15 @@ class ChannelActivity : AppCompatActivity() {
         channel = Channel.fromIntent(intent) ?: return finish()
         binding.toolbar.title = channel.name
         binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.menu.add(R.string.sort).setIcon(R.drawable.ic_sort)
+            .setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+        binding.toolbar.setOnMenuItemClickListener {
+            pickSort(listOf(VideoSort.NEWEST, VideoSort.OLDEST, VideoSort.MOST_VIEWED, VideoSort.LONGEST, VideoSort.SHORTEST), sort) {
+                sort = it
+                videos.submitList(sort.apply(allVideos))
+            }
+            true
+        }
         binding.list.adapter = ConcatAdapter(header, videos)
         binding.list.useGrid { it == 0 }
         load()
@@ -57,7 +69,8 @@ class ChannelActivity : AppCompatActivity() {
                 Library.updateChannel(channel)
                 binding.toolbar.title = channel.name
                 header.notifyItemChanged(0)
-                videos.submitList(page.videos)
+                allVideos = page.videos
+                videos.submitList(sort.apply(allVideos))
             }.onFailure {
                 binding.error.isVisible = true
                 binding.error.text = getString(R.string.channel_failed, it.message ?: it.javaClass.simpleName)

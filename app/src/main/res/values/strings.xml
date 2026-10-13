@@ -210,4 +210,31 @@
     <!-- Widget -->
     <string name="widget_name">CarTube – senaste videorna</string>
     <string name="widget_empty">Öppna CarTube för att hämta dina prenumerationer.</string>
+
+    <!-- Sorting and filters -->
+    <string name="sort">Sortera</string>
+    <string name="sort_original">Standard</string>
+    <string name="sort_relevance">Relevans</string>
+    <string name="sort_added">Senast tillagd</string>
+    <string name="sort_playlist_order">Spellistans ordning</string>
+    <string name="sort_newest">Nyast först</string>
+    <string name="sort_oldest">Äldst först</string>
+    <string name="sort_most_viewed">Mest visade</string>
+    <string name="sort_longest">Längst först</string>
+    <string name="sort_shortest">Kortast först</string>
+    <string name="sort_title">Titel A–Ö</string>
+    <string name="sort_channel">Kanal A–Ö</string>
+    <string name="uploaded">Uppladdad</string>
+    <string name="filter_any_time">När som helst</string>
+    <string name="filter_hour">Senaste timmen</string>
+    <string name="filter_today">Idag</string>
+    <string name="filter_week">Den här veckan</string>
+    <string name="filter_month">Den här månaden</string>
+    <string name="filter_year">I år</string>
+    <string name="length">Längd</string>
+    <string name="filter_any_length">Alla längder</string>
+    <string name="filter_short">Under 4 min</string>
+    <string name="filter_medium">4–20 min</string>
+    <string name="filter_long">Över 20 min</string>
+    <string name="no_results_filter">Inga träffar med de här filtren.</string>
 </resources>

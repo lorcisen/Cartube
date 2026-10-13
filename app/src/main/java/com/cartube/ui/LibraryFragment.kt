@@ -16,6 +16,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import com.cartube.R
 import com.cartube.data.Library
+import com.cartube.data.VideoSort
 import com.cartube.databinding.FragmentLibraryBinding
 
 /** Favourites, history and subscribed channels. */
@@ -35,6 +36,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         onClick = { requireContext().openVideo(it) },
     )
     private val subscriptionsChanged: () -> Unit = { refresh() }
+    private var sort = VideoSort.ORIGINAL
     private val downloadsChanged: () -> Unit = { view?.post { refresh() } }
 
     private val consent = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -46,6 +48,18 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val b = FragmentLibraryBinding.bind(view)
         binding = b
         b.filter.setOnCheckedStateChangeListener { _, _ -> refresh() }
+        b.sortButton.bindChoice(
+            listOf(
+                VideoSort.ORIGINAL, VideoSort.NEWEST, VideoSort.OLDEST, VideoSort.TITLE,
+                VideoSort.CHANNEL, VideoSort.LONGEST, VideoSort.SHORTEST,
+            ),
+            { sort },
+            { getString(if (it == VideoSort.ORIGINAL) R.string.sort_added else it.label) },
+            getString(R.string.sort),
+        ) {
+            sort = it
+            refresh()
+        }
         b.importButton.setOnClickListener { (activity as? MainActivity)?.startImport() }
         b.clearHistoryButton.setOnClickListener {
             Library.clearHistory()
@@ -152,6 +166,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val playlists = b.chipPlaylists.isChecked
         val downloads = b.chipDownloads.isChecked
         b.importButton.isVisible = channels
+        b.sortButton.isVisible = !channels && !playlists
         b.newPlaylistButton.isVisible = playlists
         b.clearHistoryButton.isVisible = history && Library.history().isNotEmpty()
 
@@ -178,7 +193,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
                     else -> entry.video.copy(uploader = getString(R.string.download_progress, entry.percent), views = -1, uploadedAt = 0)
                 }
             }
-            downloadAdapter.submitList(items)
+            downloadAdapter.submitList(sort.apply(items))
             items.isEmpty()
         } else if (channels) {
             b.list.adapter = channelAdapter
@@ -190,7 +205,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             b.list.adapter = videoAdapter
             b.list.useGrid(minItemWidthDp = 380)
             val items = if (history) Library.history() else Library.favorites()
-            videoAdapter.submitList(items)
+            videoAdapter.submitList(sort.apply(items))
             items.isEmpty()
         }
         b.empty.isVisible = empty

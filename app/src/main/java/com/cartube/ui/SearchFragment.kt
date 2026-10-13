@@ -10,7 +10,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.cartube.R
 import com.cartube.databinding.FragmentSearchBinding
+import com.cartube.data.LengthFilter
 import com.cartube.data.SearchHistory
+import com.cartube.data.UploadFilter
+import com.cartube.data.VideoSort
 import com.cartube.youtube.Channel
 import com.cartube.youtube.VideoItem
 import com.cartube.youtube.YouTube
@@ -22,6 +25,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var binding: FragmentSearchBinding? = null
     private var searchJob: Job? = null
     private var videos: List<VideoItem> = emptyList()
+    private var videoPages = 0
+    private var sort = VideoSort.ORIGINAL
+    private var upload = UploadFilter.ANY
+    private var length = LengthFilter.ANY
+
+    /** Sorting or filtering works on a bigger pool than YouTube's first page. */
+    private val wantsMore get() = sort != VideoSort.ORIGINAL || upload != UploadFilter.ANY || length != LengthFilter.ANY
+
+    private fun shownVideos(): List<VideoItem> =
+        sort.apply(videos.filter { upload.matches(it) && length.matches(it) })
     private var channels: List<Channel> = emptyList()
     private var playlists: List<YouTube.PlaylistSummary> = emptyList()
     private var lastQuery = ""
@@ -80,6 +93,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val b = FragmentSearchBinding.bind(view)
         binding = b
         b.suggestions.adapter = suggestionAdapter
+        val sortLabel: (VideoSort) -> String = {
+            getString(if (it == VideoSort.ORIGINAL) R.string.sort_relevance else it.label)
+        }
+        b.sortButton.bindChoice(
+            listOf(VideoSort.ORIGINAL, VideoSort.NEWEST, VideoSort.MOST_VIEWED, VideoSort.LONGEST, VideoSort.SHORTEST),
+            { sort }, sortLabel, getString(R.string.sort),
+        ) { sort = it; filtersChanged() }
+        b.uploadButton.bindChoice(UploadFilter.entries.toList(), { upload }, { getString(it.label) }, getString(R.string.uploaded)) {
+            upload = it
+            filtersChanged()
+        }
+        b.lengthButton.bindChoice(LengthFilter.entries.toList(), { length }, { getString(it.label) }, getString(R.string.length)) {
+            length = it
+            filtersChanged()
+        }
         b.searchInput.setOnFocusChangeListener { _, focused ->
             b.suggestions.isVisible = focused
             if (focused) updateSuggestions(b.searchInput.text?.toString().orEmpty())
@@ -146,15 +174,33 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } else {
             b.list.adapter = videoAdapter
             b.list.useGrid()
-            videoAdapter.submitList(videos)
+            videoAdapter.submitList(shownVideos())
         }
+        b.sortRow.isVisible = !showingPlaylists && !showingChannels
         val empty = when {
             showingPlaylists -> playlists.isEmpty()
             showingChannels -> channels.isEmpty()
-            else -> videos.isEmpty()
+            else -> shownVideos().isEmpty()
         }
         b.empty.isVisible = empty && searchJob?.isActive != true
-        b.empty.setText(if (lastQuery.isBlank()) R.string.empty_search else R.string.no_results)
+        b.empty.setText(
+            when {
+                lastQuery.isBlank() -> R.string.empty_search
+                !showingChannels && !showingPlaylists && videos.isNotEmpty() -> R.string.no_results_filter
+                else -> R.string.no_results
+            },
+        )
+    }
+
+    private fun filtersChanged() {
+        val b = binding ?: return
+        // Fetch a bigger pool once, then sort and filter locally.
+        if (wantsMore && videoPages < 3 && lastQuery.isNotBlank() && !showingChannels && !showingPlaylists) {
+            search(lastQuery)
+        } else {
+            showResults()
+            b.list.scrollToPosition(0)
+        }
     }
 
     private fun search(query: String) {
@@ -178,7 +224,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 when {
                     forPlaylists -> playlists = YouTube.searchPlaylists(query)
                     forChannels -> channels = YouTube.searchChannels(query)
-                    else -> videos = YouTube.search(query)
+                    else -> {
+                        val pages = if (wantsMore) 3 else 1
+                        videos = YouTube.search(query, pages)
+                        videoPages = pages
+                    }
                 }
             }
             val current = binding ?: return@launch
