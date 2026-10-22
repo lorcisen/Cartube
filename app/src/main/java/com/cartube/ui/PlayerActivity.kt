@@ -177,7 +177,16 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         applyOrientation(resources.configuration)
-        lifecycleScope.launch { TvLinkClient.connectedTo.collect { header.notifyItemChanged(0) } }
+        lifecycleScope.launch {
+            var last = TvLinkClient.connectedTo.value
+            TvLinkClient.connectedTo.collect { tv ->
+                header.notifyItemChanged(0)
+                if (tv != null && tv != last) {
+                    Toast.makeText(this@PlayerActivity, getString(R.string.tv_link_connected, tv), Toast.LENGTH_LONG).show()
+                }
+                last = tv
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -361,10 +370,12 @@ class PlayerActivity : AppCompatActivity() {
         val found = mutableListOf<TvLinkClient.Tv>()
         val names = android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1)
         var stop: () -> Unit = {}
+        val subnet = TvLinkClient.subnet(this)
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.tv_link)
-            .setMessage(R.string.tv_link_searching)
+            .setMessage(if (subnet != null) getString(R.string.tv_link_scanning, subnet) else getString(R.string.tv_link_no_wifi))
             .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.tv_link_manual) { _, _ -> enterTvAddress(subnet) }
             .setOnDismissListener { stop() }
             .create()
         val list = android.widget.ListView(this).apply { adapter = names }
@@ -375,7 +386,6 @@ class PlayerActivity : AppCompatActivity() {
             TvLinkClient.connect(this, tv) {
                 Toast.makeText(this, R.string.tv_link_failed, Toast.LENGTH_LONG).show()
             }
-            Toast.makeText(this, getString(R.string.tv_link_connected, tv.name), Toast.LENGTH_LONG).show()
         }
         stop = TvLinkClient.discover(this) { tv ->
             if (found.none { it.name == tv.name }) {
@@ -384,6 +394,31 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun enterTvAddress(subnet: String?) {
+        val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+            hint = getString(R.string.tv_link_manual_hint)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+            setText(subnet?.let { "$it." }.orEmpty())
+            setSelection(text?.length ?: 0)
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, 0, pad, 0)
+            addView(input)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.tv_link_manual)
+            .setMessage(R.string.tv_link_manual_message)
+            .setView(box)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                TvLinkClient.connectTo(this, input.text?.toString().orEmpty()) {
+                    Toast.makeText(this, R.string.tv_link_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+            .show()
     }
 
     private fun tvLinkOptions() {

@@ -315,4 +315,12 @@
     <string name="tv_link_sound_on_phone">Ljudet spelas i mobilen</string>
     <string name="tv_link_phone_left">Mobilen kopplades från.</string>
     <string name="tv_link_load_failed">Kunde inte ladda videon på TV:n.</string>
+    <string name="tv_link_ready">Bild från mobil · %1$s</string>
+    <string name="tv_link_not_ready">Bild från mobil · inte redo</string>
+    <string name="tv_link_help">Starta en video i CarTube på mobilen och tryck på Bild på TV. Hittas inte TV:n, välj Ange adress i mobilen och skriv adressen som står här.</string>
+    <string name="tv_link_manual">Ange adress</string>
+    <string name="tv_link_manual_hint">t.ex. 192.168.1.23</string>
+    <string name="tv_link_manual_message">Adressen står på TV:n under Mer → Bild från mobil.</string>
+    <string name="tv_link_no_wifi">Mobilen verkar inte vara ansluten till wifi.</string>
+    <string name="tv_link_scanning">Söker efter TV på %1$s.* … Öppna CarTube på TV:n (4.2.2 eller senare). Adressen står på TV:n under Mer → Bild från mobil.</string>
 </resources>

@@ -42,5 +42,9 @@ class CarTubeApp : Application() {
             ContentCountry(locale.country.ifBlank { "US" }),
         )
         NewVideosWorker.schedule(this)
+        // On a TV, be ready for a phone that wants to show its video here.
+        if (packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)) {
+            com.cartube.tvlink.TvLinkServer.start(this)
+        }
     }
 }

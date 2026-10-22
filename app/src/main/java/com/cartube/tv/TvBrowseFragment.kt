@@ -61,11 +61,13 @@ class TvBrowseFragment : BrowseSupportFragment() {
         setRow(ROW_CONTINUE, R.string.continue_watching, Positions.unfinished(Library.history()).take(20))
         setRow(ROW_WATCH_LATER, R.string.watch_later, Library.later(Library.WATCH_LATER))
         setRow(ROW_HISTORY, R.string.tab_history, Library.history().take(40))
+        setActions()
     }
 
     private fun load() {
         setRow(ROW_FAVORITES, R.string.tab_favorites, Library.favorites())
         setActions()
+        viewLifecycleOwner.lifecycleScope.launch { com.cartube.tvlink.TvLinkServer.address.collect { setActions() } }
         Sync.syncInBackground()
         viewLifecycleOwner.lifecycleScope.launch {
             setRow(ROW_FEED, R.string.nav_home, Feed.cached)
@@ -105,6 +107,14 @@ class TvBrowseFragment : BrowseSupportFragment() {
         val actions = ArrayObjectAdapter(ActionCardPresenter()).apply {
             add(ActionCardPresenter.Action("search", getString(R.string.nav_search), R.drawable.ic_search))
             add(ActionCardPresenter.Action("settings", getString(R.string.settings), R.drawable.ic_settings))
+            val address = com.cartube.tvlink.TvLinkServer.address.value
+            add(
+                ActionCardPresenter.Action(
+                    "link",
+                    if (address != null) getString(R.string.tv_link_ready, address) else getString(R.string.tv_link_not_ready),
+                    R.drawable.ic_tv,
+                ),
+            )
         }
         val row = ListRow(HeaderItem(ROW_ACTIONS, getString(R.string.tv_more)), actions)
         val index = rowIds.indexOf(ROW_ACTIONS)
@@ -118,6 +128,7 @@ class TvBrowseFragment : BrowseSupportFragment() {
         when (action.id) {
             "search" -> startActivity(Intent(requireContext(), TvSearchActivity::class.java))
             "settings" -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
+            "link" -> android.widget.Toast.makeText(requireContext(), R.string.tv_link_help, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

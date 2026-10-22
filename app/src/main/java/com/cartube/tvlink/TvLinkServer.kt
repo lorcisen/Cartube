@@ -50,6 +50,10 @@ object TvLinkServer {
     private val _phone = MutableStateFlow<String?>(null)
     val phone: StateFlow<String?> = _phone
 
+    /** Where phones reach this TV, e.g. "192.168.1.23:47811", or why they can't. */
+    private val _address = MutableStateFlow<String?>(null)
+    val address: StateFlow<String?> = _address
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val writes = Executors.newSingleThreadExecutor()
     private var started = false
@@ -67,8 +71,15 @@ object TvLinkServer {
             val server = try {
                 ServerSocket(TvLink.PORT)
             } catch (e: IOException) {
-                ServerSocket(0)
+                Log.w(TAG, "Port ${TvLink.PORT} is taken", e)
+                try {
+                    ServerSocket(0)
+                } catch (e: IOException) {
+                    _address.value = null
+                    return@launch
+                }
             }
+            _address.value = localAddress(app)?.let { "$it:${server.localPort}" }
             register(app, server.localPort)
             while (true) {
                 val socket = try {
@@ -164,6 +175,12 @@ object TvLinkServer {
         runCatching {
             app.startActivity(Intent(app, TvLinkActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
+    }
+
+    private fun localAddress(app: Context): String? {
+        val connectivity = app.getSystemService(android.net.ConnectivityManager::class.java) ?: return null
+        return connectivity.getLinkProperties(connectivity.activeNetwork)?.linkAddresses
+            ?.map { it.address }?.filterIsInstance<java.net.Inet4Address>()?.firstOrNull()?.hostAddress
     }
 
     private fun register(app: Context, port: Int) {

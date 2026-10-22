@@ -235,11 +235,36 @@ object TvLinkClient {
         }
     }
 
+    /** The first three parts of the phone's Wi-Fi address, e.g. "192.168.1", or null without Wi-Fi. */
+    fun subnet(context: Context): String? {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return null
+        val network = wifi(context) ?: return null
+        val own = connectivity.getLinkProperties(network)?.linkAddresses
+            ?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull() ?: return null
+        return own.hostAddress?.substringBeforeLast('.')
+    }
+
+    /** Checks a typed-in address ("192.168.1.23" or "192.168.1.23:47811") and connects to it. */
+    fun connectTo(context: Context, typed: String, onFailed: () -> Unit) {
+        val host = typed.trim().substringBefore(':')
+        val port = typed.substringAfter(':', "").trim().toIntOrNull() ?: TvLink.PORT
+        scope.launch {
+            val tv = withContext(Dispatchers.IO) {
+                runCatching {
+                    val address = InetAddress.getByName(host)
+                    val network = wifi(context)
+                    if (network != null) probe(network, address, port) else null
+                }.getOrNull()
+            }
+            if (tv == null) onFailed() else connect(context, tv, onFailed)
+        }
+    }
+
     /** Asks one address whether it is a CarTube TV. */
-    private fun probe(network: Network, address: InetAddress): Tv? = runCatching {
+    private fun probe(network: Network, address: InetAddress, port: Int = TvLink.PORT): Tv? = runCatching {
         Socket().use { socket ->
             network.bindSocket(socket)
-            socket.connect(InetSocketAddress(address, TvLink.PORT), 400)
+            socket.connect(InetSocketAddress(address, port), if (port == TvLink.PORT) 400 else 3000)
             socket.soTimeout = 1500
             val out = socket.getOutputStream().bufferedWriter()
             out.write(JSONObject().put("t", "who").toString())
@@ -247,7 +272,7 @@ object TvLinkClient {
             out.flush()
             val reply = JSONObject(socket.getInputStream().bufferedReader().readLine() ?: return@use null)
             if (reply.optString("t") != "tv") return@use null
-            Tv(reply.optString("name").ifBlank { address.hostAddress ?: "TV" }, address, TvLink.PORT)
+            Tv(reply.optString("name").ifBlank { address.hostAddress ?: "TV" }, address, port)
         }
     }.getOrNull()
 
