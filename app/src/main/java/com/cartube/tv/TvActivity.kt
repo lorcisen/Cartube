@@ -10,6 +10,8 @@ class TvActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tv)
+        // Lets a phone show its video here while it plays the sound itself.
+        com.cartube.tvlink.TvLinkServer.start(this)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction().replace(R.id.tvContent, TvBrowseFragment()).commit()
         }

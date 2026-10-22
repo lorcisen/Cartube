@@ -59,6 +59,7 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.cartube.tvlink.TvLinkClient
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.stream.Description
 
@@ -176,6 +177,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         applyOrientation(resources.configuration)
+        lifecycleScope.launch { TvLinkClient.connectedTo.collect { header.notifyItemChanged(0) } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -351,6 +353,55 @@ class PlayerActivity : AppCompatActivity() {
             }
             .setNeutralButton(R.string.queue_clear) { _, _ -> PlayQueue.clear() }
             .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /** Lists CarTube TVs on the network; picking one shows the picture there, sound stays here. */
+    private fun pickTv() {
+        val found = mutableListOf<TvLinkClient.Tv>()
+        val names = android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1)
+        var stop: () -> Unit = {}
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.tv_link)
+            .setMessage(R.string.tv_link_searching)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setOnDismissListener { stop() }
+            .create()
+        val list = android.widget.ListView(this).apply { adapter = names }
+        dialog.setView(list)
+        list.setOnItemClickListener { _, _, position, _ ->
+            val tv = found[position]
+            dialog.dismiss()
+            TvLinkClient.connect(this, tv) {
+                Toast.makeText(this, R.string.tv_link_failed, Toast.LENGTH_LONG).show()
+            }
+            Toast.makeText(this, getString(R.string.tv_link_connected, tv.name), Toast.LENGTH_LONG).show()
+        }
+        stop = TvLinkClient.discover(this) { tv ->
+            if (found.none { it.name == tv.name }) {
+                found += tv
+                names.add(tv.name)
+            }
+        }
+        dialog.show()
+    }
+
+    private fun tvLinkOptions() {
+        val name = TvLinkClient.connectedTo.value ?: return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.tv_link_title, name, AppSettings.tvLinkDelayMs))
+            .setItems(
+                arrayOf(getString(R.string.tv_link_earlier), getString(R.string.tv_link_later), getString(R.string.tv_link_disconnect)),
+            ) { _, which ->
+                when (which) {
+                    0, 1 -> {
+                        AppSettings.tvLinkDelayMs += if (which == 0) -50 else 50
+                        Toast.makeText(this, getString(R.string.tv_link_delay_now, AppSettings.tvLinkDelayMs), Toast.LENGTH_SHORT).show()
+                        tvLinkOptions()
+                    }
+                    else -> TvLinkClient.disconnect()
+                }
+            }
             .show()
     }
 
@@ -535,6 +586,13 @@ class PlayerActivity : AppCompatActivity() {
                 AppSettings.audioOnly = !AppSettings.audioOnly
                 b.audioOnly.isChecked = AppSettings.audioOnly
                 if (AppSettings.audioOnly) Toast.makeText(this@PlayerActivity, R.string.audio_only_on, Toast.LENGTH_SHORT).show()
+            }
+            val tv = TvLinkClient.connectedTo.value
+            b.tvLink.isChecked = tv != null
+            b.tvLink.text = if (tv != null) getString(R.string.tv_link_on, tv) else getString(R.string.tv_link)
+            b.tvLink.setOnClickListener {
+                b.tvLink.isChecked = TvLinkClient.connectedTo.value != null
+                if (TvLinkClient.connectedTo.value != null) tvLinkOptions() else pickTv()
             }
             b.queueButton.setOnClickListener { showQueue() }
             b.downloadButton.setOnClickListener { DownloadDialog.show(this@PlayerActivity, item) }

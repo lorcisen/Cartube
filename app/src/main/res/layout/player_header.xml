@@ -142,6 +142,15 @@
                 app:icon="@drawable/ic_headphones" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/tvLink"
+                style="@style/CarTube.ActionButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/tv_link"
+                app:icon="@drawable/ic_tv" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/queueButton"
                 style="@style/CarTube.ActionButton"
                 android:layout_width="wrap_content"

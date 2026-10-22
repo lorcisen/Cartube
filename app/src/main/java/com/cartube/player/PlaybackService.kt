@@ -228,6 +228,9 @@ class PlaybackService : MediaLibraryService() {
         PlayQueue.addListener(queueListener)
         updateVideoEnabled()
         audioEffects.apply(exoPlayer.audioSessionId)
+        // Picture on a TV, sound here: the phone needs no video of its own meanwhile.
+        com.cartube.tvlink.TvLinkClient.attach(exoPlayer)
+        scope.launch { com.cartube.tvlink.TvLinkClient.connectedTo.collect { updateVideoEnabled() } }
 
         castPlayer = runCatching { CastPlayer(CastContext.getSharedInstance(this)) }
             .onFailure { Log.w(TAG, "Cast is not available", it) }
@@ -250,6 +253,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         carConnection.removeObserver(carObserver)
+        com.cartube.tvlink.TvLinkClient.detach(exoPlayer)
         handler.removeCallbacks(sleep)
         handler.removeCallbacks(savePosition)
         rememberPosition()
@@ -321,7 +325,8 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private fun updateVideoEnabled() = setVideoEnabled(!inCar && !Settings.audioOnly)
+    private fun updateVideoEnabled() =
+        setVideoEnabled(!inCar && !Settings.audioOnly && com.cartube.tvlink.TvLinkClient.connectedTo.value == null)
 
     private fun setVideoEnabled(enabled: Boolean) {
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()

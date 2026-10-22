@@ -301,4 +301,18 @@
     <string name="tv_trending_sweden">Trendande i Sverige</string>
     <string name="tv_more">Mer</string>
     <string name="tv_results">Resultat för \"%1$s\"</string>
+    <string name="tv_link">Bild på TV</string>
+    <string name="tv_link_on">På %1$s</string>
+    <string name="tv_link_searching">Söker efter TV… Öppna CarTube på TV:n och se till att båda är på samma wifi.</string>
+    <string name="tv_link_failed">Kunde inte ansluta till TV:n.</string>
+    <string name="tv_link_connected">Bilden visas på %1$s – ljudet spelas här.</string>
+    <string name="tv_link_title">Bild på %1$s · justering %2$d ms</string>
+    <string name="tv_link_disconnect">Koppla från TV:n</string>
+    <string name="tv_link_earlier">Bilden kommer för sent (flytta 50 ms tidigare)</string>
+    <string name="tv_link_later">Bilden kommer för tidigt (flytta 50 ms senare)</string>
+    <string name="tv_link_delay_now">Justering: %1$d ms</string>
+    <string name="tv_link_waiting">Väntar på mobilen…</string>
+    <string name="tv_link_sound_on_phone">Ljudet spelas i mobilen</string>
+    <string name="tv_link_phone_left">Mobilen kopplades från.</string>
+    <string name="tv_link_load_failed">Kunde inte ladda videon på TV:n.</string>
 </resources>

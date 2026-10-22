@@ -92,6 +92,12 @@
             android:theme="@style/Theme.CarTube.TV" />
 
         <activity
+            android:name=".tvlink.TvLinkActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CarTube.Player" />
+
+        <activity
             android:name=".tv.TvPlayerActivity"
             android:exported="false"
             android:theme="@style/Theme.CarTube.Player" />
