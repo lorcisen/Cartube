@@ -45,6 +45,22 @@ class TvLinkActivity : FragmentActivity() {
     /** How far ahead to jump; grows when loading takes longer than the jump. */
     private var leadMs = 1500L
     private var wasConnected = false
+    private var holdingSince = 0L
+    private var retried: String? = null
+    private var textOn = Settings.subtitles != Settings.SUBTITLES_OFF
+
+    private val errors = object : Player.Listener {
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            val url = loadedUrl ?: return
+            if (retried == url) {
+                showStatus(getString(R.string.tv_link_play_failed, error.errorCodeName), hide = false)
+                return
+            }
+            // Stream addresses expire and some formats fail; fetch fresh ones once.
+            retried = url
+            loadedUrl = null
+        }
+    }
 
     private val tick = object : Runnable {
         override fun run() {
@@ -67,9 +83,9 @@ class TvLinkActivity : FragmentActivity() {
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             // The sound comes from the phone; don't even download it here.
             .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
-            .setPreferredTextLanguage(if (Settings.subtitles == Settings.SUBTITLES_SWEDISH) "sv" else null)
-            .setIgnoredTextSelectionFlags(if (Settings.subtitles == Settings.SUBTITLES_OFF) C.SELECTION_FLAG_DEFAULT else 0)
             .build()
+        applyText()
+        player.addListener(errors)
         playerView.player = player
         playerView.useController = false
         playerView.keepScreenOn = true
@@ -116,6 +132,12 @@ class TvLinkActivity : FragmentActivity() {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY,
                 KeyEvent.KEYCODE_MEDIA_PAUSE -> JSONObject().put("c", "toggle")
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CAPTIONS -> {
+                    textOn = !textOn
+                    applyText()
+                    showStatus(getString(if (textOn) R.string.tv_link_text_on else R.string.tv_link_text_off), hide = true)
+                    return true
+                }
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> JSONObject().put("c", "seek").put("by", -SEEK_MS)
                 KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> JSONObject().put("c", "seek").put("by", SEEK_MS)
                 else -> null
@@ -146,10 +168,19 @@ class TvLinkActivity : FragmentActivity() {
             return
         }
 
+        val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
         val expected = state.positionAt(SystemClock.elapsedRealtime())
+            .coerceIn(0, duration?.minus(500)?.coerceAtLeast(0) ?: Long.MAX_VALUE)
         when {
             holding -> {
-                if (player.playbackState != Player.STATE_READY) return
+                if (player.playbackState != Player.STATE_READY) {
+                    // Never sit on a black screen: after a while, just play from where we are.
+                    if (SystemClock.elapsedRealtime() - holdingSince > 12_000) {
+                        holding = false
+                        player.playWhenReady = true
+                    }
+                    return
+                }
                 val wait = position - expected
                 when {
                     // Loading took longer than the jump: the phone is already past us.
@@ -177,7 +208,16 @@ class TvLinkActivity : FragmentActivity() {
         }
     }
 
+    /** Text is off unless turned on with the remote (up), as on the phone. */
+    private fun applyText() {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !textOn)
+            .setPreferredTextLanguage(if (Settings.subtitles == Settings.SUBTITLES_ORIGINAL) null else "sv")
+            .build()
+    }
+
     private fun jumpAhead(expected: Long) {
+        holdingSince = SystemClock.elapsedRealtime()
         holding = true
         player.playWhenReady = false
         player.seekTo(expected + leadMs)
@@ -188,6 +228,7 @@ class TvLinkActivity : FragmentActivity() {
     }
 
     private fun load(video: VideoItem) {
+        if (retried != null && retried != video.url) retried = null
         loadedUrl = video.url
         holding = false
         loadJob?.cancel()
@@ -195,7 +236,7 @@ class TvLinkActivity : FragmentActivity() {
         player.clearMediaItems()
         showStatus("${video.title}\n${getString(R.string.tv_link_sound_on_phone)}", hide = true)
         loadJob = lifecycleScope.launch {
-            val loaded = runCatching { YouTube.streamInfo(video.url) }
+            val loaded = runCatching { YouTube.streamInfo(video.url, fresh = retried == video.url) }
             if (loaded.isFailure) {
                 showStatus(getString(R.string.tv_link_load_failed), hide = true)
                 return@launch

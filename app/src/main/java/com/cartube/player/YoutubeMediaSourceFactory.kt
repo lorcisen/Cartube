@@ -138,9 +138,12 @@ class YoutubeMediaSourceFactory(context: Context) : MediaSource.Factory {
             (stream.deliveryMethod == DeliveryMethod.DASH && stream.itagItem != null))
 
     private fun pickVideo(streams: List<VideoStream>, maxHeight: Int): VideoStream? = streams
-        .filter { usable(it) && it.height in 1..maxHeight }
+        .filter { usable(it) && it.height in 1..maxHeight && Codecs.canDecode(it.codec) }
         .sortedWith(
-            compareByDescending<VideoStream> { it.height }
+            // A codec this device decodes in hardware first: e.g. a Chromecast can't play
+            // AV1 smoothly (or at all) in software and just shows a black screen.
+            compareByDescending<VideoStream> { if (Codecs.hasHardware(it.codec)) 1 else 0 }
+                .thenByDescending { it.height }
                 .thenByDescending { it.fps }
                 .thenByDescending { if (it.format == MediaFormat.MPEG_4) 1 else 0 },
         )

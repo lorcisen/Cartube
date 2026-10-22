@@ -323,4 +323,7 @@
     <string name="tv_link_delay_label">%1$s: bilden %2$d ms</string>
     <string name="tv_link_delay_hint">Titta på någon som pratar. Kommer läpparna före ljudet, dra åt plus (senare bild). Kommer de efter, dra åt minus. Ändringen syns på TV:n inom någon sekund och sparas för de här hörlurarna.</string>
     <string name="done">Klar</string>
+    <string name="tv_link_play_failed">Videon gick inte att spela på TV:n (%1$s).</string>
+    <string name="tv_link_text_on">Text på (pil upp stänger av)</string>
+    <string name="tv_link_text_off">Text av (pil upp slår på)</string>
 </resources>

@@ -73,7 +73,7 @@
 
     <PreferenceCategory app:title="@string/pref_subtitles_category">
         <ListPreference
-            app:defaultValue="sv"
+            app:defaultValue="off"
             app:entries="@array/subtitle_labels"
             app:entryValues="@array/subtitle_values"
             app:key="subtitles"

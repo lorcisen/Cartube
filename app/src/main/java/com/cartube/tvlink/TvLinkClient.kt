@@ -345,7 +345,8 @@ object TvLinkClient {
     private fun ping() = send(JSONObject().put("t", "ping").put("a", SystemClock.elapsedRealtime()))
 
     private fun sendState() {
-        if (socket == null) return
+        // Without a clock reading from the TV, positions would point anywhere.
+        if (socket == null || samples.isEmpty()) return
         val p = player
         val item = p?.currentMediaItem
         val message = JSONObject().put("t", "state")

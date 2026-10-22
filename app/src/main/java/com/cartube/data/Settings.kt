@@ -42,6 +42,11 @@ object Settings {
     fun init(context: Context) {
         appContext = context.applicationContext
         prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
+        // Videos now start without text; CC in the player turns it on. Applied once, so a
+        // later choice in the settings sticks.
+        if (!prefs.getBoolean("subtitles_off_by_default", false)) {
+            prefs.edit().putString(KEY_SUBTITLES, SUBTITLES_OFF).putBoolean("subtitles_off_by_default", true).apply()
+        }
         applyTheme()
     }
 
@@ -66,7 +71,7 @@ object Settings {
             ?: DEFAULT_SPONSOR_CATEGORIES
     val showDislikes: Boolean get() = prefs.getBoolean(KEY_DISLIKES, true)
     val gestures: Boolean get() = prefs.getBoolean(KEY_GESTURES, true)
-    val subtitles: String get() = prefs.getString(KEY_SUBTITLES, SUBTITLES_SWEDISH) ?: SUBTITLES_SWEDISH
+    val subtitles: String get() = prefs.getString(KEY_SUBTITLES, SUBTITLES_OFF) ?: SUBTITLES_OFF
     /** Subtitle height as a fraction of the video height. */
     val subtitleSize: Float get() = prefs.getString(KEY_SUBTITLE_SIZE, "0.0533")?.toFloatOrNull() ?: 0.0533f
     /**
