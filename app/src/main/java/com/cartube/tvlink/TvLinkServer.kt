@@ -53,6 +53,7 @@ object TvLinkServer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val writes = Executors.newSingleThreadExecutor()
     private var started = false
+    private var name = Build.MODEL
     @Volatile private var current: Socket? = null
     @Volatile private var out: BufferedWriter? = null
 
@@ -60,6 +61,8 @@ object TvLinkServer {
         if (started) return
         started = true
         val app = context.applicationContext
+        name = android.provider.Settings.Global.getString(app.contentResolver, "device_name")
+            ?.takeIf { it.isNotBlank() } ?: Build.MODEL
         scope.launch {
             val server = try {
                 ServerSocket(TvLink.PORT)
@@ -73,9 +76,6 @@ object TvLinkServer {
                 } catch (e: IOException) {
                     continue
                 }
-                // One phone at a time; the newest one takes over.
-                runCatching { current?.close() }
-                current = socket
                 launch { serve(app, socket) }
             }
         }
@@ -103,12 +103,29 @@ object TvLinkServer {
         try {
             socket.tcpNoDelay = true
             val reader = socket.getInputStream().bufferedReader()
-            out = socket.getOutputStream().bufferedWriter()
+            val writer = socket.getOutputStream().bufferedWriter()
             while (true) {
                 val line = reader.readLine() ?: break
                 val message = runCatching { JSONObject(line) }.getOrNull() ?: continue
-                when (message.optString("t")) {
-                    "hello" -> _phone.value = message.optString("name").ifBlank { "Mobil" }
+                val type = message.optString("t")
+                if (type == "who") {
+                    // A phone looking for TVs on the network: say who we are and hang up.
+                    writer.write(JSONObject().put("t", "tv").put("name", name).toString())
+                    writer.write("\n")
+                    writer.flush()
+                    break
+                }
+                if (type == "hello") {
+                    // One phone at a time; the newest one takes over.
+                    val old = current
+                    current = socket
+                    out = writer
+                    if (old != null && old !== socket) runCatching { old.close() }
+                    _phone.value = message.optString("name").ifBlank { "Mobil" }
+                    continue
+                }
+                if (current !== socket) continue
+                when (type) {
                     "ping" -> send(
                         JSONObject().put("t", "pong")
                             .put("a", message.optLong("a"))
@@ -151,8 +168,6 @@ object TvLinkServer {
 
     private fun register(app: Context, port: Int) {
         val nsd = app.getSystemService(NsdManager::class.java) ?: return
-        val name = android.provider.Settings.Global.getString(app.contentResolver, "device_name")
-            ?.takeIf { it.isNotBlank() } ?: Build.MODEL
         val info = NsdServiceInfo().apply {
             serviceName = name
             serviceType = TvLink.SERVICE_TYPE

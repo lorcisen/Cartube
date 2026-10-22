@@ -1,6 +1,9 @@
 package com.cartube.tvlink
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
@@ -21,9 +24,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
 import java.io.BufferedWriter
 import java.io.IOException
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -88,6 +95,7 @@ object TvLinkClient {
             val connected = withContext(Dispatchers.IO) {
                 runCatching {
                     Socket().apply {
+                        wifi(context)?.let { runCatching { it.bindSocket(this) } }
                         connect(InetSocketAddress(tv.host, tv.port), 5000)
                         tcpNoDelay = true
                     }
@@ -179,8 +187,69 @@ object TvLinkClient {
         }
         runCatching { nsd.discoverServices(TvLink.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discovery) }
             .onFailure { Log.w(TAG, "Could not search for TVs", it) }
-        return { runCatching { nsd.stopServiceDiscovery(discovery) } }
+        // Many routers drop the multicast that service discovery relies on, so also ask
+        // every address on the local network directly.
+        val scan = scope.launch {
+            while (isActive) {
+                scanSubnet(context, onFound)
+                delay(3000)
+            }
+        }
+        return {
+            scan.cancel()
+            runCatching { nsd.stopServiceDiscovery(discovery) }
+        }
     }
+
+    private suspend fun scanSubnet(context: Context, onFound: (Tv) -> Unit) = coroutineScope {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return@coroutineScope
+        val network = wifi(context) ?: return@coroutineScope
+        val own = connectivity.getLinkProperties(network)?.linkAddresses
+            ?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull()
+            ?: return@coroutineScope
+        val bytes = own.address
+        val self = bytes[3].toInt() and 0xff
+        val limit = Semaphore(48)
+        for (last in 1..254) {
+            if (last == self) continue
+            launch(Dispatchers.IO) {
+                val address = InetAddress.getByAddress(byteArrayOf(bytes[0], bytes[1], bytes[2], last.toByte()))
+                val tv = limit.withPermit { probe(network, address) } ?: return@launch
+                withContext(Dispatchers.Main) { onFound(tv) }
+            }
+        }
+    }
+
+    /**
+     * The Wi-Fi network, even when a VPN is the default route: the TV is on the Wi-Fi, and
+     * talking to it through a VPN tunnel usually doesn't work.
+     */
+    @Suppress("DEPRECATION")
+    private fun wifi(context: Context): Network? {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return null
+        return connectivity.allNetworks.firstOrNull {
+            val caps = connectivity.getNetworkCapabilities(it)
+            caps != null && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) &&
+                !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        }
+    }
+
+    /** Asks one address whether it is a CarTube TV. */
+    private fun probe(network: Network, address: InetAddress): Tv? = runCatching {
+        Socket().use { socket ->
+            network.bindSocket(socket)
+            socket.connect(InetSocketAddress(address, TvLink.PORT), 400)
+            socket.soTimeout = 1500
+            val out = socket.getOutputStream().bufferedWriter()
+            out.write(JSONObject().put("t", "who").toString())
+            out.write("\n")
+            out.flush()
+            val reply = JSONObject(socket.getInputStream().bufferedReader().readLine() ?: return@use null)
+            if (reply.optString("t") != "tv") return@use null
+            Tv(reply.optString("name").ifBlank { address.hostAddress ?: "TV" }, address, TvLink.PORT)
+        }
+    }.getOrNull()
 
     private fun read(socket: Socket) {
         try {

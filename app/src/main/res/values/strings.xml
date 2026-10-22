@@ -303,7 +303,7 @@
     <string name="tv_results">Resultat för \"%1$s\"</string>
     <string name="tv_link">Bild på TV</string>
     <string name="tv_link_on">På %1$s</string>
-    <string name="tv_link_searching">Söker efter TV… Öppna CarTube på TV:n och se till att båda är på samma wifi.</string>
+    <string name="tv_link_searching">Söker efter TV… Öppna CarTube på TV:n (version 4.2 eller senare) och se till att båda är på samma wifi.</string>
     <string name="tv_link_failed">Kunde inte ansluta till TV:n.</string>
     <string name="tv_link_connected">Bilden visas på %1$s – ljudet spelas här.</string>
     <string name="tv_link_title">Bild på %1$s · justering %2$d ms</string>
