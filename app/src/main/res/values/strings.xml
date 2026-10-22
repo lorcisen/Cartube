@@ -306,11 +306,7 @@
     <string name="tv_link_searching">Söker efter TV… Öppna CarTube på TV:n (version 4.2 eller senare) och se till att båda är på samma wifi.</string>
     <string name="tv_link_failed">Kunde inte ansluta till TV:n.</string>
     <string name="tv_link_connected">Bilden visas på %1$s – ljudet spelas här.</string>
-    <string name="tv_link_title">Bild på %1$s · justering %2$d ms</string>
     <string name="tv_link_disconnect">Koppla från TV:n</string>
-    <string name="tv_link_earlier">Bilden kommer för sent (flytta 50 ms tidigare)</string>
-    <string name="tv_link_later">Bilden kommer för tidigt (flytta 50 ms senare)</string>
-    <string name="tv_link_delay_now">Justering: %1$d ms</string>
     <string name="tv_link_waiting">Väntar på mobilen…</string>
     <string name="tv_link_sound_on_phone">Ljudet spelas i mobilen</string>
     <string name="tv_link_phone_left">Mobilen kopplades från.</string>
@@ -323,4 +319,8 @@
     <string name="tv_link_manual_message">Adressen står på TV:n under Mer → Bild från mobil.</string>
     <string name="tv_link_no_wifi">Mobilen verkar inte vara ansluten till wifi.</string>
     <string name="tv_link_scanning">Söker efter TV på %1$s.* … Öppna CarTube på TV:n (4.2.2 eller senare). Adressen står på TV:n under Mer → Bild från mobil.</string>
+    <string name="tv_link_speaker">Mobilens högtalare</string>
+    <string name="tv_link_delay_label">%1$s: bilden %2$d ms</string>
+    <string name="tv_link_delay_hint">Titta på någon som pratar. Kommer läpparna före ljudet, dra åt plus (senare bild). Kommer de efter, dra åt minus. Ändringen syns på TV:n inom någon sekund och sparas för de här hörlurarna.</string>
+    <string name="done">Klar</string>
 </resources>

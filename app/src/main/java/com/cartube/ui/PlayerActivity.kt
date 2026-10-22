@@ -14,6 +14,7 @@ import android.view.OrientationEventListener
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -421,22 +422,63 @@ class PlayerActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Fine-tunes picture against sound for the headphones in use, while watching. */
     private fun tvLinkOptions() {
         val name = TvLinkClient.connectedTo.value ?: return
+        val density = resources.displayMetrics.density
+        val output = TvLinkClient.output(this).let { if (it == "speaker") getString(R.string.tv_link_speaker) else it }
+        val label = TextView(this).apply {
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge)
+        }
+        val slider = com.google.android.material.slider.Slider(this).apply {
+            valueFrom = -1000f
+            valueTo = 1000f
+            stepSize = 10f
+            value = TvLinkClient.delayMs.coerceIn(-1000, 1000).toFloat().let { (it / 10).toInt() * 10f }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        fun render() {
+            val ms = slider.value.toInt()
+            label.text = getString(R.string.tv_link_delay_label, output, ms)
+        }
+        fun set(ms: Int) {
+            slider.value = ms.coerceIn(-1000, 1000).toFloat()
+        }
+        slider.addOnChangeListener { _, value, _ ->
+            TvLinkClient.setDelay(this, value.toInt())
+            render()
+        }
+        fun step(text: String, by: Int) = com.google.android.material.button.MaterialButton(
+            this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle,
+        ).apply {
+            this.text = text
+            setOnClickListener { set(slider.value.toInt() + by) }
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            addView(step("−", -10))
+            addView(slider)
+            addView(step("+", 10))
+        }
+        val hint = TextView(this).apply {
+            text = getString(R.string.tv_link_delay_hint)
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
+        }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (24 * density).toInt()
+            setPadding(pad, (8 * density).toInt(), pad, 0)
+            addView(label)
+            addView(row)
+            addView(hint)
+        }
+        render()
         MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.tv_link_title, name, AppSettings.tvLinkDelayMs))
-            .setItems(
-                arrayOf(getString(R.string.tv_link_earlier), getString(R.string.tv_link_later), getString(R.string.tv_link_disconnect)),
-            ) { _, which ->
-                when (which) {
-                    0, 1 -> {
-                        AppSettings.tvLinkDelayMs += if (which == 0) -50 else 50
-                        Toast.makeText(this, getString(R.string.tv_link_delay_now, AppSettings.tvLinkDelayMs), Toast.LENGTH_SHORT).show()
-                        tvLinkOptions()
-                    }
-                    else -> TvLinkClient.disconnect()
-                }
-            }
+            .setTitle(getString(R.string.tv_link_on, name))
+            .setView(box)
+            .setPositiveButton(R.string.done, null)
+            .setNeutralButton(R.string.tv_link_disconnect) { _, _ -> TvLinkClient.disconnect() }
             .show()
     }
 

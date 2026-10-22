@@ -11,8 +11,8 @@ android {
         applicationId = "com.cartube"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "4.2.2"
+        versionCode = 30
+        versionName = "4.2.3"
         buildConfigField("String", "UPDATE_REPO", "\"lorcisen/Cartube\"")
     }
 

@@ -76,6 +76,35 @@ object TvLinkClient {
         }
     }
 
+    private var appContext: Context? = null
+
+    /** The adjustment for the current headphones or speaker, see [Settings.tvLinkDelay]. */
+    val delayMs: Int get() = appContext?.let { Settings.tvLinkDelay(output(it)) } ?: 0
+
+    fun setDelay(context: Context, ms: Int) {
+        Settings.setTvLinkDelay(output(context), ms)
+        sendState()
+    }
+
+    /** Name of where the sound goes now: the Bluetooth or wired headphones, or the speaker. */
+    fun output(context: Context): String {
+        val audio = context.getSystemService(android.media.AudioManager::class.java) ?: return "speaker"
+        val preferred = listOf(
+            android.media.AudioDeviceInfo.TYPE_BLE_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER,
+            android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        )
+        val devices = audio.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+        for (type in preferred) {
+            val device = devices.firstOrNull { it.type == type } ?: continue
+            return device.productName?.toString()?.takeIf { it.isNotBlank() } ?: "type$type"
+        }
+        return "speaker"
+    }
+
     /** Called by the playback service with the player whose sound the TV follows. */
     fun attach(player: Player) {
         this.player?.removeListener(listener)
@@ -91,6 +120,7 @@ object TvLinkClient {
 
     fun connect(context: Context, tv: Tv, onFailed: () -> Unit) {
         disconnect()
+        appContext = context.applicationContext
         scope.launch {
             val connected = withContext(Dispatchers.IO) {
                 runCatching {
@@ -322,7 +352,7 @@ object TvLinkClient {
         if (p != null && item != null) {
             message
                 .put("video", VideoItem.fromMediaItem(item).toJson())
-                .put("pos", p.currentPosition - Settings.tvLinkDelayMs)
+                .put("pos", p.currentPosition - delayMs)
                 .put("at", SystemClock.elapsedRealtime() + offsetMs)
                 .put("speed", p.playbackParameters.speed.toDouble())
                 .put("playing", p.isPlaying)

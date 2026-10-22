@@ -69,10 +69,13 @@ object Settings {
     val subtitles: String get() = prefs.getString(KEY_SUBTITLES, SUBTITLES_SWEDISH) ?: SUBTITLES_SWEDISH
     /** Subtitle height as a fraction of the video height. */
     val subtitleSize: Float get() = prefs.getString(KEY_SUBTITLE_SIZE, "0.0533")?.toFloatOrNull() ?: 0.0533f
-    /** How much later (ms) the TV shows the picture than the phone plays the sound; negative = earlier. */
-    var tvLinkDelayMs: Int
-        get() = prefs.getInt("tv_link_delay", 0)
-        set(value) = prefs.edit().putInt("tv_link_delay", value).apply()
+    /**
+     * How much later (ms) the TV shows the picture than the phone plays the sound, for one
+     * audio output (each pair of headphones has its own delay); negative = earlier.
+     */
+    fun tvLinkDelay(output: String): Int = prefs.getInt("tv_link_delay:$output", prefs.getInt("tv_link_delay", 0))
+
+    fun setTvLinkDelay(output: String, ms: Int) = prefs.edit().putInt("tv_link_delay:$output", ms).apply()
 
     var audioOnly: Boolean
         get() = prefs.getBoolean(KEY_AUDIO_ONLY, false)

@@ -170,7 +170,7 @@ class TvLinkActivity : FragmentActivity() {
             else -> {
                 // Positive: the picture is ahead of the sound, so slow down a little.
                 val drift = position - expected
-                val correction = if (abs(drift) < 30) 0f else (drift / 2000f).coerceIn(-0.08f, 0.08f)
+                val correction = if (abs(drift) < 12) 0f else (drift / 1500f).coerceIn(-0.08f, 0.08f)
                 setSpeed(state.speed * (1f - correction))
                 player.playWhenReady = true
             }
